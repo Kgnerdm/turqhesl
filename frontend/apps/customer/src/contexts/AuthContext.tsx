@@ -60,11 +60,52 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   /**
-   * Login user
+   * Login user (with mock support for development)
    */
   const login = useCallback(async (data: LoginRequest) => {
     setIsLoading(true);
     try {
+      // MOCK LOGIN FOR DEVELOPMENT - Remove in production
+      const mockUsers: Record<string, User> = {
+        'provider@demo.com': {
+          id: '1',
+          email: 'provider@demo.com',
+          firstName: 'Demo',
+          lastName: 'Provider',
+          role: 'provider',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        'patient@demo.com': {
+          id: '2',
+          email: 'patient@demo.com',
+          firstName: 'Demo',
+          lastName: 'Patient',
+          role: 'patient',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        'admin@demo.com': {
+          id: '3',
+          email: 'admin@demo.com',
+          firstName: 'Demo',
+          lastName: 'Admin',
+          role: 'admin',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+
+      const mockUser = mockUsers[data.email];
+      if (mockUser && data.password === 'Demo123!') {
+        localStorage.setItem('accessToken', 'mock-token');
+        localStorage.setItem('refreshToken', 'mock-refresh-token');
+        localStorage.setItem('user', JSON.stringify(mockUser));
+        setUser(mockUser);
+        return;
+      }
+      // END MOCK LOGIN
+
       const response = await authApi.login(data);
       
       // Store tokens
