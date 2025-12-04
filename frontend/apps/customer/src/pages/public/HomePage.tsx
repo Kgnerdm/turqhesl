@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -16,6 +16,24 @@ import {
 } from 'lucide-react';
 import { Button, Select } from '@/components/ui';
 import { PACKAGE_CATEGORIES, TURKISH_CITIES } from '@/types';
+
+// Mock packages data (synced with PackagesPage)
+const mockPackages = [
+  // Istanbul Dental Center packages (providerId: '1')
+  { id: 'pkg-1', providerId: '1', name: 'Premium Dental Implant Package' },
+  { id: 'pkg-2', providerId: '1', name: 'Teeth Whitening Package' },
+  { id: 'pkg-3', providerId: '1', name: 'Full Mouth Restoration' },
+  // Anadolu Medical Center packages (providerId: '2')
+  { id: 'pkg-4', providerId: '2', name: 'Cardiac Check-Up Package' },
+  { id: 'pkg-5', providerId: '2', name: 'Oncology Screening' },
+  { id: 'pkg-6', providerId: '2', name: 'Orthopedic Surgery Package' },
+  { id: 'pkg-7', providerId: '2', name: 'Joint Replacement Package' },
+  // Hair Turkey Clinic packages (providerId: '3')
+  { id: 'pkg-8', providerId: '3', name: 'FUE Hair Transplant - 3000 Grafts' },
+  { id: 'pkg-9', providerId: '3', name: 'DHI Hair Transplant Package' },
+  // Vision Plus Eye Center packages (providerId: '4')
+  { id: 'pkg-10', providerId: '4', name: 'LASIK Eye Surgery' },
+];
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -42,15 +60,24 @@ const HomePage = () => {
     navigate(`/packages?${params.toString()}`);
   };
 
+  // Calculate package counts from mock data
+  const packageCountByProvider = useMemo(() => {
+    const counts: Record<string, number> = {};
+    mockPackages.forEach((pkg) => {
+      counts[pkg.providerId] = (counts[pkg.providerId] || 0) + 1;
+    });
+    return counts;
+  }, []);
+
   // Featured providers mock data (synced with ProvidersPage)
-  const featuredProviders = [
+  const featuredProviders = useMemo(() => [
     {
       id: '1',
       name: 'Istanbul Dental Center',
       city: 'Istanbul',
       description: 'Leading dental clinic specializing in implants, veneers, and cosmetic dentistry.',
       categories: ['Dental Care', 'Cosmetic Dentistry'],
-      packageCount: 12,
+      packageCount: packageCountByProvider['1'] || 0,
       isVerified: true,
       image: 'https://images.unsplash.com/photo-1629909615184-74f495363b67?w=800',
     },
@@ -60,7 +87,7 @@ const HomePage = () => {
       city: 'Istanbul',
       description: 'JCI-accredited hospital with Johns Hopkins Medicine partnership.',
       categories: ['Oncology', 'Cardiology', 'Orthopedic'],
-      packageCount: 24,
+      packageCount: packageCountByProvider['2'] || 0,
       isVerified: true,
       image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800',
     },
@@ -70,7 +97,7 @@ const HomePage = () => {
       city: 'Istanbul',
       description: 'Premier hair restoration with FUE and DHI techniques.',
       categories: ['Hair Transplant'],
-      packageCount: 8,
+      packageCount: packageCountByProvider['3'] || 0,
       isVerified: true,
       image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800',
     },
@@ -80,11 +107,11 @@ const HomePage = () => {
       city: 'Ankara',
       description: 'State-of-the-art LASIK surgery and eye care services.',
       categories: ['Eye Surgery'],
-      packageCount: 6,
+      packageCount: packageCountByProvider['4'] || 0,
       isVerified: true,
       image: 'https://images.unsplash.com/photo-1551076805-e1869033e561?w=800',
     },
-  ];
+  ], [packageCountByProvider]);
 
   // Trust badges data
   const trustBadges = [
