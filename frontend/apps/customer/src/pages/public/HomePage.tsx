@@ -8,18 +8,13 @@ import {
   DollarSign, 
   Zap,
   CheckCircle,
-  BadgeCheck,
   MapPin,
   ArrowRight,
   Heart,
-  Star,
   Users,
-  Stethoscope,
-  Hospital,
-  Eye,
-  Sparkles
+  Stethoscope
 } from 'lucide-react';
-import { Button, Card, Badge, Select } from '@/components/ui';
+import { Button, Select } from '@/components/ui';
 import { PACKAGE_CATEGORIES, TURKISH_CITIES } from '@/types';
 
 const HomePage = () => {
@@ -47,43 +42,47 @@ const HomePage = () => {
     navigate(`/packages?${params.toString()}`);
   };
 
-  // Featured providers mock data
+  // Featured providers mock data (synced with ProvidersPage)
   const featuredProviders = [
     {
       id: '1',
       name: 'Istanbul Dental Center',
       city: 'Istanbul',
+      description: 'Leading dental clinic specializing in implants, veneers, and cosmetic dentistry.',
+      categories: ['Dental Care', 'Cosmetic Dentistry'],
       packageCount: 12,
       isVerified: true,
-      icon: Hospital,
-      gradient: 'from-primary-400 to-primary-600',
+      image: 'https://images.unsplash.com/photo-1629909615184-74f495363b67?w=800',
     },
     {
       id: '2',
       name: 'Anadolu Medical Center',
       city: 'Istanbul',
+      description: 'JCI-accredited hospital with Johns Hopkins Medicine partnership.',
+      categories: ['Oncology', 'Cardiology', 'Orthopedic'],
       packageCount: 24,
       isVerified: true,
-      icon: Building2,
-      gradient: 'from-blue-400 to-blue-600',
+      image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800',
     },
     {
       id: '3',
       name: 'Hair Turkey Clinic',
       city: 'Istanbul',
+      description: 'Premier hair restoration with FUE and DHI techniques.',
+      categories: ['Hair Transplant'],
       packageCount: 8,
       isVerified: true,
-      icon: Sparkles,
-      gradient: 'from-purple-400 to-purple-600',
+      image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800',
     },
     {
       id: '4',
-      name: 'Ankara Eye Center',
+      name: 'Vision Plus Eye Center',
       city: 'Ankara',
+      description: 'State-of-the-art LASIK surgery and eye care services.',
+      categories: ['Eye Surgery'],
       packageCount: 6,
       isVerified: true,
-      icon: Eye,
-      gradient: 'from-emerald-400 to-emerald-600',
+      image: 'https://images.unsplash.com/photo-1551076805-e1869033e561?w=800',
     },
   ];
 
@@ -354,43 +353,58 @@ const HomePage = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {featuredProviders.map((provider) => (
               <Link key={provider.id} to={`/providers/${provider.id}`} className="group">
-                <div className="relative h-full bg-white rounded-2xl p-8 shadow-lg border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-center">
+                <div className="relative h-full bg-white rounded-2xl overflow-hidden shadow-lg border-2 border-gray-100 hover:border-primary-300 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
                   {/* Verified Badge - Absolute */}
                   {provider.isVerified && (
-                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-                      <CheckCircle className="w-5 h-5 text-white" />
+                    <div className="absolute top-4 right-4 z-10 bg-green-500 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-lg">
+                      <CheckCircle className="w-4 h-4 text-white" />
+                      <span className="text-xs font-medium text-white">Verified</span>
                     </div>
                   )}
 
-                  {/* Logo with Gradient */}
-                  <div className={`w-20 h-20 bg-gradient-to-br ${provider.gradient} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    <provider.icon className="w-10 h-10 text-white" strokeWidth={1.5} />
+                  {/* Image Section */}
+                  <div className="relative h-40 overflow-hidden">
+                    <img 
+                      src={provider.image} 
+                      alt={provider.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                   </div>
 
-                  {/* Name */}
-                  <h3 className="font-bold text-gray-900 mb-3 text-lg">
-                    {provider.name}
-                  </h3>
+                  {/* Content */}
+                  <div className="p-5">
+                    {/* Name */}
+                    <h3 className="font-bold text-gray-900 mb-2 text-lg group-hover:text-primary-600 transition-colors">
+                      {provider.name}
+                    </h3>
 
-                  {/* City */}
-                  <div className="flex items-center justify-center gap-1.5 text-sm text-gray-500 mb-4">
-                    <MapPin className="w-4 h-4" />
-                    <span>{provider.city}, Turkey</span>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center justify-center gap-4 pt-4 border-t border-gray-100">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-primary-600">{provider.packageCount}</p>
-                      <p className="text-xs text-gray-500">Packages</p>
+                    {/* City */}
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
+                      <MapPin className="w-4 h-4" />
+                      <span>{provider.city}, Turkey</span>
                     </div>
-                    <div className="w-px h-10 bg-gray-200" />
-                    <div className="text-center">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="text-lg font-bold text-gray-900">4.9</span>
+
+                    {/* Categories */}
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {provider.categories.slice(0, 2).map((cat) => (
+                        <span 
+                          key={cat} 
+                          className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full"
+                        >
+                          {cat}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Package Count */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <Package className="w-5 h-5 text-primary-600" />
+                        <span className="text-lg font-bold text-primary-600">{provider.packageCount}</span>
+                        <span className="text-sm text-gray-500">packages</span>
                       </div>
-                      <p className="text-xs text-gray-500">Rating</p>
+                      <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
                     </div>
                   </div>
                 </div>
