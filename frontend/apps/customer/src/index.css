@@ -85,7 +85,32 @@
   .zoom-in-95 {
     animation-name: zoomIn95;
   }
+
+  /* Hero animations */
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+  }
   
+  .animate-fade-in-delay {
+    animation: fadeIn 0.8s ease-out 0.2s forwards;
+    opacity: 0;
+  }
+  
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+    opacity: 0;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.8s ease-out 0.4s forwards;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  
+  .animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+  }
+
   @keyframes animateIn {
     from {
       opacity: 0;
@@ -98,9 +123,33 @@
   @keyframes fadeIn {
     from {
       opacity: 0;
+      transform: translateY(-10px);
     }
     to {
       opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
   
@@ -112,6 +161,17 @@
     to {
       opacity: 1;
       transform: scale(1);
+    }
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.8;
     }
   }
 
