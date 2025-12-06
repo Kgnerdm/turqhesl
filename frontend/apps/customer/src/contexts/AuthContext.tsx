@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const accessToken = localStorage.getItem('accessToken');
 
         if (storedUser && accessToken) {
-          // Try to get fresh user data
+          // Try to get fresh user data from API
           try {
             const currentUser = await authApi.getCurrentUser();
             setUser(currentUser);
@@ -60,52 +60,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   /**
-   * Login user (with mock support for development)
+   * Login user with real backend API
    */
   const login = useCallback(async (data: LoginRequest) => {
     setIsLoading(true);
     try {
-      // MOCK LOGIN FOR DEVELOPMENT - Remove in production
-      const mockUsers: Record<string, User> = {
-        'provider@demo.com': {
-          id: '1',
-          email: 'provider@demo.com',
-          firstName: 'Demo',
-          lastName: 'Provider',
-          role: 'provider',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        'patient@demo.com': {
-          id: '2',
-          email: 'patient@demo.com',
-          firstName: 'Demo',
-          lastName: 'Patient',
-          role: 'patient',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        'admin@demo.com': {
-          id: '3',
-          email: 'admin@demo.com',
-          firstName: 'Demo',
-          lastName: 'Admin',
-          role: 'admin',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      };
-
-      const mockUser = mockUsers[data.email];
-      if (mockUser && data.password === 'Demo123!') {
-        localStorage.setItem('accessToken', 'mock-token');
-        localStorage.setItem('refreshToken', 'mock-refresh-token');
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        setUser(mockUser);
-        return;
-      }
-      // END MOCK LOGIN
-
       const response = await authApi.login(data);
       
       // Store tokens
@@ -120,12 +79,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   /**
-   * Register new user
+   * Register new user with real backend API
    */
   const register = useCallback(async (data: RegisterRequest) => {
     setIsLoading(true);
     try {
-      const response = await authApi.register(data);
+      // Ensure passwordConfirm is set
+      const registerData = {
+        ...data,
+        passwordConfirm: data.passwordConfirm || data.password,
+      };
+      
+      const response = await authApi.register(registerData);
       
       // Store tokens
       localStorage.setItem('accessToken', response.tokens.accessToken);
@@ -202,6 +167,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
-export default AuthContext;
-

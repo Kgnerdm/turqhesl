@@ -33,7 +33,16 @@ const LoginPage = () => {
       setError('');
       await login(data);
       navigate(from, { replace: true });
-    } catch (err) {
+    } catch (err: unknown) {
+      // Handle backend error messages
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { data?: { detail?: string } } };
+        const detail = axiosError.response?.data?.detail;
+        if (detail) {
+          setError(detail);
+          return;
+        }
+      }
       setError('Invalid email or password. Please try again.');
     }
   };
@@ -142,14 +151,14 @@ const LoginPage = () => {
           </div>
         </Card>
 
-        {/* Demo accounts hint */}
+        {/* Test account hint */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <p className="text-xs text-gray-500 text-center">
-            <strong>Demo Accounts:</strong>
+            <strong>Test Account:</strong>
             <br />
-            Patient: patient@demo.com | Provider: provider@demo.com
+            Email: patient@test.com
             <br />
-            Password: Demo123!
+            Password: SecurePass123!
           </p>
         </div>
       </div>

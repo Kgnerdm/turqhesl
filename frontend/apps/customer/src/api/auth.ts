@@ -3,24 +3,98 @@ import type {
   LoginRequest, 
   RegisterRequest, 
   AuthResponse, 
-  ApiResponse,
   User 
 } from '@/types';
+
+/**
+ * Backend User Response (snake_case)
+ */
+interface BackendUser {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: 'patient' | 'provider' | 'admin';
+  phone: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Backend Auth Response
+ */
+interface BackendAuthResponse {
+  user: BackendUser;
+  tokens: {
+    access: string;
+    refresh: string;
+  };
+}
+
+/**
+ * Backend Register Request (snake_case)
+ */
+interface BackendRegisterRequest {
+  email: string;
+  password: string;
+  password_confirm: string;
+  first_name: string;
+  last_name: string;
+  role: 'patient' | 'provider';
+  phone?: string;
+}
+
+/**
+ * Transform backend user to frontend format
+ */
+const transformUser = (backendUser: BackendUser): User => ({
+  id: String(backendUser.id),
+  email: backendUser.email,
+  firstName: backendUser.first_name,
+  lastName: backendUser.last_name,
+  role: backendUser.role,
+  phone: backendUser.phone ?? undefined,
+  createdAt: backendUser.created_at,
+  updatedAt: backendUser.updated_at,
+});
+
+/**
+ * Transform backend auth response to frontend format
+ */
+const transformAuthResponse = (backendResponse: BackendAuthResponse): AuthResponse => ({
+  user: transformUser(backendResponse.user),
+  tokens: {
+    accessToken: backendResponse.tokens.access,
+    refreshToken: backendResponse.tokens.refresh,
+  },
+});
 
 /**
  * Login user with email and password
  */
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
-  const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', data);
-  return response.data.data;
+  const response = await api.post<BackendAuthResponse>('/auth/login/', data);
+  return transformAuthResponse(response.data);
 };
 
 /**
  * Register new user
  */
 export const register = async (data: RegisterRequest): Promise<AuthResponse> => {
-  const response = await api.post<ApiResponse<AuthResponse>>('/auth/register', data);
-  return response.data.data;
+  // Transform frontend request to backend format
+  const backendRequest: BackendRegisterRequest = {
+    email: data.email,
+    password: data.password,
+    password_confirm: data.passwordConfirm || data.password, // Handle both formats
+    first_name: data.firstName,
+    last_name: data.lastName,
+    role: data.role === 'admin' ? 'patient' : data.role, // Admin role not allowed on register
+    phone: data.phone,
+  };
+  
+  const response = await api.post<BackendAuthResponse>('/auth/register/', backendRequest);
+  return transformAuthResponse(response.data);
 };
 
 /**
@@ -28,7 +102,10 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
  */
 export const logout = async (): Promise<void> => {
   try {
-    await api.post('/auth/logout');
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      await api.post('/auth/logout/', { refresh: refreshToken });
+    }
   } finally {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -40,46 +117,33 @@ export const logout = async (): Promise<void> => {
  * Get current user profile
  */
 export const getCurrentUser = async (): Promise<User> => {
-  const response = await api.get<ApiResponse<User>>('/auth/me');
-  return response.data.data;
+  const response = await api.get<BackendUser>('/auth/me/');
+  return transformUser(response.data);
 };
 
 /**
  * Refresh access token
  */
 export const refreshToken = async (token: string): Promise<AuthResponse['tokens']> => {
-  const response = await api.post<ApiResponse<AuthResponse['tokens']>>('/auth/refresh', {
-    refreshToken: token,
+  const response = await api.post<{ access: string; refresh: string }>('/auth/token/refresh/', {
+    refresh: token,
   });
-  return response.data.data;
-};
-
-/**
- * Request password reset email
- */
-export const forgotPassword = async (email: string): Promise<void> => {
-  await api.post('/auth/forgot-password', { email });
-};
-
-/**
- * Reset password with token
- */
-export const resetPassword = async (token: string, password: string): Promise<void> => {
-  await api.post('/auth/reset-password', { token, password });
+  return {
+    accessToken: response.data.access,
+    refreshToken: response.data.refresh,
+  };
 };
 
 /**
  * Update user profile
  */
 export const updateProfile = async (data: Partial<User>): Promise<User> => {
-  const response = await api.patch<ApiResponse<User>>('/auth/profile', data);
-  return response.data.data;
+  // Transform to backend format
+  const backendData: Partial<BackendUser> = {};
+  if (data.firstName !== undefined) backendData.first_name = data.firstName;
+  if (data.lastName !== undefined) backendData.last_name = data.lastName;
+  if (data.phone !== undefined) backendData.phone = data.phone || null;
+  
+  const response = await api.patch<BackendUser>('/auth/me/', backendData);
+  return transformUser(response.data);
 };
-
-/**
- * Change password
- */
-export const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
-  await api.post('/auth/change-password', { currentPassword, newPassword });
-};
-

@@ -29,6 +29,7 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
+  passwordConfirm?: string; // Optional - will default to password if not provided
   firstName: string;
   lastName: string;
   role: UserRole;

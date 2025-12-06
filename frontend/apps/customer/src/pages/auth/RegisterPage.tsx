@@ -44,11 +44,24 @@ const RegisterPage = () => {
         lastName: data.lastName,
         email: data.email,
         password: data.password,
+        passwordConfirm: data.confirmPassword,
         role: data.role,
         phone: data.phone || undefined,
       });
       navigate('/dashboard');
-    } catch (err) {
+    } catch (err: unknown) {
+      // Handle backend validation errors
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as { response?: { data?: Record<string, string[]> } };
+        const errors = axiosError.response?.data;
+        if (errors) {
+          const messages = Object.entries(errors)
+            .map(([, msgs]) => msgs.join(', '))
+            .join(' ');
+          setError(messages || 'Registration failed. Please try again.');
+          return;
+        }
+      }
       setError('Registration failed. This email may already be in use.');
     }
   };

@@ -48,20 +48,22 @@ api.interceptors.response.use(
           throw new Error('No refresh token');
         }
 
-        // Try to refresh the token
-        const response = await axios.post(`${API_URL}/auth/refresh`, {
-          refreshToken,
+        // Try to refresh the token - Django SimpleJWT uses /token/refresh/
+        const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
+          refresh: refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        const { access, refresh: newRefreshToken } = response.data;
 
         // Store new tokens
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
+        localStorage.setItem('accessToken', access);
+        if (newRefreshToken) {
+          localStorage.setItem('refreshToken', newRefreshToken);
+        }
 
         // Update header and retry
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${access}`;
         }
         
         return api(originalRequest);
@@ -83,4 +85,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
