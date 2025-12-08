@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Search, 
@@ -14,85 +14,8 @@ import {
   Building2
 } from 'lucide-react';
 import { Button, Select } from '@/components/ui';
+import { getProviders, type ProvidersResponse } from '@/api/providers';
 import type { Provider } from '@/types';
-
-// Mock data
-const mockProviders: Provider[] = [
-  {
-    id: '1',
-    userId: '1',
-    businessName: 'Istanbul Dental Center',
-    description: 'Leading dental clinic in Istanbul with over 20 years of experience. Specializing in dental implants, veneers, and cosmetic dentistry.',
-    city: 'Istanbul',
-    address: 'Nişantaşı, Teşvikiye Cad. No:45, Istanbul',
-    phone: '+90 212 123 4567',
-    email: 'info@istanbuldental.com',
-    website: 'https://istanbuldental.com',
-    logoUrl: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=100',
-    coverImageUrl: 'https://images.unsplash.com/photo-1629909615184-74f495363b67?w=800',
-    images: [],
-    isVerified: true,
-    verificationDate: '2024-01-15',
-    rating: 4.9,
-    reviewCount: 256,
-    categories: ['Dental Care', 'Cosmetic Dentistry'],
-    certificates: [],
-    workingHours: {} as any,
-    createdAt: '2023-01-01',
-    updatedAt: '2024-01-01',
-  },
-  {
-    id: '2',
-    userId: '2',
-    businessName: 'Anadolu Medical Center',
-    description: 'JCI-accredited hospital offering comprehensive healthcare services. Partnership with Johns Hopkins Medicine for international standards.',
-    city: 'Istanbul',
-    address: 'Gebze, Istanbul',
-    phone: '+90 262 654 3200',
-    email: 'info@anadolumedical.com',
-    website: 'https://anadolumedical.com',
-    logoUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=100',
-    coverImageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800',
-    images: [],
-    isVerified: true,
-    verificationDate: '2024-01-10',
-    rating: 4.8,
-    reviewCount: 512,
-    categories: ['Oncology', 'Cardiology', 'Orthopedic'],
-    certificates: [],
-    workingHours: {} as any,
-    createdAt: '2023-01-01',
-    updatedAt: '2024-01-01',
-  },
-  {
-    id: '3',
-    userId: '3',
-    businessName: 'Hair Turkey Clinic',
-    description: 'Premier hair restoration clinic with state-of-the-art FUE and DHI techniques. Over 15,000 successful procedures performed.',
-    city: 'Istanbul',
-    address: 'Şişli, Istanbul',
-    phone: '+90 212 987 6543',
-    email: 'info@hairturkey.com',
-    logoUrl: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=100',
-    coverImageUrl: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800',
-    images: [],
-    isVerified: true,
-    rating: 4.7,
-    reviewCount: 389,
-    categories: ['Hair Transplant'],
-    certificates: [],
-    workingHours: {} as any,
-    createdAt: '2023-01-01',
-    updatedAt: '2024-01-01',
-  },
-];
-
-// Package counts for providers
-const packageCounts: Record<string, number> = {
-  '1': 12,
-  '2': 24,
-  '3': 8,
-};
 
 // Category color mapping
 const categoryColors: Record<string, string> = {
@@ -102,13 +25,16 @@ const categoryColors: Record<string, string> = {
   'Cardiology': 'bg-red-50 text-red-700',
   'Orthopedic': 'bg-green-50 text-green-700',
   'Hair Transplant': 'bg-indigo-50 text-indigo-700',
+  'Eye Surgery': 'bg-cyan-50 text-cyan-700',
 };
 
 const ProvidersPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [pagination, setPagination] = useState<ProvidersResponse['pagination'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Filter states
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -128,47 +54,47 @@ const ProvidersPage = () => {
   const sortOptions = [
     { value: '', label: 'Recommended' },
     { value: 'newest', label: 'Newest First' },
-    { value: 'name_asc', label: 'Name A-Z' },
+    { value: 'name', label: 'Name A-Z' },
     { value: 'name_desc', label: 'Name Z-A' },
   ];
 
-  useEffect(() => {
-    const loadProviders = async () => {
-      setIsLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 800));
+  const loadProviders = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await getProviders({
+        search: search || undefined,
+        city: city || undefined,
+        isVerified: verifiedOnly || undefined,
+        page: 1,
+        limit: 20,
+      });
       
-      let filtered = [...mockProviders];
+      let sortedProviders = [...response.data];
       
-      if (city) {
-        filtered = filtered.filter((p) => p.city === city);
-      }
-      if (verifiedOnly) {
-        filtered = filtered.filter((p) => p.isVerified);
-      }
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filtered = filtered.filter(
-          (p) =>
-            p.businessName.toLowerCase().includes(searchLower) ||
-            p.description.toLowerCase().includes(searchLower) ||
-            p.categories.some((c) => c.toLowerCase().includes(searchLower))
-        );
-      }
-      
-      if (sortBy === 'name_asc') {
-        filtered.sort((a, b) => a.businessName.localeCompare(b.businessName));
+      // Client-side sorting (backend doesn't support all sort options)
+      if (sortBy === 'name') {
+        sortedProviders.sort((a, b) => a.businessName.localeCompare(b.businessName));
       } else if (sortBy === 'name_desc') {
-        filtered.sort((a, b) => b.businessName.localeCompare(a.businessName));
+        sortedProviders.sort((a, b) => b.businessName.localeCompare(a.businessName));
       } else if (sortBy === 'newest') {
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        sortedProviders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       }
       
-      setProviders(filtered);
+      setProviders(sortedProviders);
+      setPagination(response.pagination);
+    } catch (err) {
+      console.error('Failed to load providers:', err);
+      setError('Failed to load providers. Please try again.');
+    } finally {
       setIsLoading(false);
-    };
+    }
+  }, [search, city, verifiedOnly, sortBy]);
 
+  useEffect(() => {
     loadProviders();
-  }, [city, verifiedOnly, search, sortBy]);
+  }, [loadProviders]);
 
   const updateFilters = () => {
     const params = new URLSearchParams();
@@ -188,6 +114,11 @@ const ProvidersPage = () => {
   };
 
   const hasActiveFilters = search || city || !verifiedOnly || sortBy;
+
+  // Get package count from provider (backend returns this)
+  const getPackageCount = (provider: Provider): number => {
+    return provider.packageCount || 0;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -215,7 +146,7 @@ const ProvidersPage = () => {
           <div className="flex flex-wrap items-center gap-6">
             <div className="flex items-center gap-2 text-gray-700">
               <Building2 className="w-5 h-5 text-primary-600" />
-              <span className="font-semibold">{providers.length} providers</span>
+              <span className="font-semibold">{pagination?.total || providers.length} providers</span>
               <span className="text-gray-500">found</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full">
@@ -339,7 +270,7 @@ const ProvidersPage = () => {
             {/* Mobile Filter Button */}
             <div className="lg:hidden flex items-center justify-between mb-4">
               <p className="text-sm text-gray-600">
-                <span className="font-semibold">{providers.length}</span> providers found
+                <span className="font-semibold">{pagination?.total || providers.length}</span> providers found
               </p>
               <Button
                 variant="outline"
@@ -411,9 +342,19 @@ const ProvidersPage = () => {
             {/* Results Info Bar - Desktop */}
             <div className="hidden lg:flex items-center justify-between bg-gray-50 rounded-xl p-4 mb-6">
               <p className="text-gray-700">
-                <span className="font-semibold">{providers.length}</span> providers found
+                <span className="font-semibold">{pagination?.total || providers.length}</span> providers found
               </p>
             </div>
+
+            {/* Error State */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                <p className="text-red-700">{error}</p>
+                <Button size="sm" onClick={loadProviders} className="mt-2">
+                  Try Again
+                </Button>
+              </div>
+            )}
 
             {/* ============================================ */}
             {/* PROVIDER CARDS / LOADING / EMPTY */}
@@ -520,7 +461,7 @@ const ProvidersPage = () => {
                         {/* Package Count */}
                         <div className="flex items-center gap-2 text-gray-600 mb-4">
                           <Package className="w-4 h-4" />
-                          <span>{packageCounts[provider.id] || 0} packages available</span>
+                          <span>{getPackageCount(provider)} packages available</span>
                         </div>
 
                         {/* Footer */}

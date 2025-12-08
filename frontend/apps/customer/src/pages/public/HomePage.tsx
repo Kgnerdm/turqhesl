@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -15,30 +15,27 @@ import {
   Stethoscope
 } from 'lucide-react';
 import { Button, Select } from '@/components/ui';
-import { PACKAGE_CATEGORIES, TURKISH_CITIES } from '@/types';
+import { PACKAGE_CATEGORIES, TURKISH_CITIES, type Provider } from '@/types';
+import { getProviders } from '@/api/providers';
 
-// Mock packages data (synced with PackagesPage)
-const mockPackages = [
-  // Istanbul Dental Center packages (providerId: '1')
-  { id: 'pkg-1', providerId: '1', name: 'Premium Dental Implant Package' },
-  { id: 'pkg-2', providerId: '1', name: 'Teeth Whitening Package' },
-  { id: 'pkg-3', providerId: '1', name: 'Full Mouth Restoration' },
-  // Anadolu Medical Center packages (providerId: '2')
-  { id: 'pkg-4', providerId: '2', name: 'Cardiac Check-Up Package' },
-  { id: 'pkg-5', providerId: '2', name: 'Oncology Screening' },
-  { id: 'pkg-6', providerId: '2', name: 'Orthopedic Surgery Package' },
-  { id: 'pkg-7', providerId: '2', name: 'Joint Replacement Package' },
-  // Hair Turkey Clinic packages (providerId: '3')
-  { id: 'pkg-8', providerId: '3', name: 'FUE Hair Transplant - 3000 Grafts' },
-  { id: 'pkg-9', providerId: '3', name: 'DHI Hair Transplant Package' },
-  // Vision Plus Eye Center packages (providerId: '4')
-  { id: 'pkg-10', providerId: '4', name: 'LASIK Eye Surgery' },
-];
+// Featured provider type for display
+interface FeaturedProvider {
+  id: string;
+  name: string;
+  city: string;
+  description: string;
+  categories: string[];
+  packageCount: number;
+  isVerified: boolean;
+  image: string;
+}
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [selectedTreatment, setSelectedTreatment] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
+  const [featuredProviders, setFeaturedProviders] = useState<FeaturedProvider[]>([]);
+  const [isLoadingProviders, setIsLoadingProviders] = useState(true);
 
   // Treatment options for search
   const treatmentOptions = [
@@ -52,6 +49,37 @@ const HomePage = () => {
     ...TURKISH_CITIES.map((city) => ({ value: city, label: city })),
   ];
 
+  // Load featured providers from API
+  useEffect(() => {
+    const loadFeaturedProviders = async () => {
+      setIsLoadingProviders(true);
+      try {
+        const response = await getProviders({ isVerified: true, limit: 4 });
+        
+        const providers: FeaturedProvider[] = response.data.map((p: Provider) => ({
+          id: p.id,
+          name: p.businessName,
+          city: p.city,
+          description: p.description,
+          categories: p.categories,
+          packageCount: p.packageCount || 0,
+          isVerified: p.isVerified,
+          image: p.coverImageUrl || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800',
+        }));
+        
+        setFeaturedProviders(providers);
+      } catch (error) {
+        console.error('Failed to load featured providers:', error);
+        // Fallback to empty array - could show static data here
+        setFeaturedProviders([]);
+      } finally {
+        setIsLoadingProviders(false);
+      }
+    };
+
+    loadFeaturedProviders();
+  }, []);
+
   // Handle search
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -59,59 +87,6 @@ const HomePage = () => {
     if (selectedCity) params.set('city', selectedCity);
     navigate(`/packages?${params.toString()}`);
   };
-
-  // Calculate package counts from mock data
-  const packageCountByProvider = useMemo(() => {
-    const counts: Record<string, number> = {};
-    mockPackages.forEach((pkg) => {
-      counts[pkg.providerId] = (counts[pkg.providerId] || 0) + 1;
-    });
-    return counts;
-  }, []);
-
-  // Featured providers mock data (synced with ProvidersPage)
-  const featuredProviders = useMemo(() => [
-    {
-      id: '1',
-      name: 'Istanbul Dental Center',
-      city: 'Istanbul',
-      description: 'Leading dental clinic specializing in implants, veneers, and cosmetic dentistry.',
-      categories: ['Dental Care', 'Cosmetic Dentistry'],
-      packageCount: packageCountByProvider['1'] || 0,
-      isVerified: true,
-      image: 'https://images.unsplash.com/photo-1629909615184-74f495363b67?w=800',
-    },
-    {
-      id: '2',
-      name: 'Anadolu Medical Center',
-      city: 'Istanbul',
-      description: 'JCI-accredited hospital with Johns Hopkins Medicine partnership.',
-      categories: ['Oncology', 'Cardiology', 'Orthopedic'],
-      packageCount: packageCountByProvider['2'] || 0,
-      isVerified: true,
-      image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800',
-    },
-    {
-      id: '3',
-      name: 'Hair Turkey Clinic',
-      city: 'Istanbul',
-      description: 'Premier hair restoration with FUE and DHI techniques.',
-      categories: ['Hair Transplant'],
-      packageCount: packageCountByProvider['3'] || 0,
-      isVerified: true,
-      image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800',
-    },
-    {
-      id: '4',
-      name: 'Vision Plus Eye Center',
-      city: 'Ankara',
-      description: 'State-of-the-art LASIK surgery and eye care services.',
-      categories: ['Eye Surgery'],
-      packageCount: packageCountByProvider['4'] || 0,
-      isVerified: true,
-      image: 'https://images.unsplash.com/photo-1551076805-e1869033e561?w=800',
-    },
-  ], [packageCountByProvider]);
 
   // Trust badges data
   const trustBadges = [
@@ -378,7 +353,35 @@ const HomePage = () => {
 
           {/* Provider Grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuredProviders.map((provider) => (
+            {isLoadingProviders ? (
+              // Loading skeleton
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-lg border-2 border-gray-100 animate-pulse">
+                  <div className="h-40 bg-gray-200" />
+                  <div className="p-5">
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-2" />
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-3" />
+                    <div className="flex gap-1.5 mb-4">
+                      <div className="h-6 bg-gray-200 rounded-full w-16" />
+                      <div className="h-6 bg-gray-200 rounded-full w-20" />
+                    </div>
+                    <div className="pt-4 border-t border-gray-100">
+                      <div className="h-6 bg-gray-200 rounded w-1/3" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : featuredProviders.length === 0 ? (
+              // Empty state
+              <div className="col-span-full text-center py-12">
+                <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No providers available at the moment.</p>
+                <Link to="/providers" className="text-primary-600 font-medium hover:underline mt-2 inline-block">
+                  Browse all providers
+                </Link>
+              </div>
+            ) : (
+              featuredProviders.map((provider) => (
               <Link key={provider.id} to={`/providers/${provider.id}`} className="group">
                 <div className="relative h-full bg-white rounded-2xl overflow-hidden shadow-lg border-2 border-gray-100 hover:border-primary-300 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
                   {/* Verified Badge - Absolute */}
@@ -436,7 +439,8 @@ const HomePage = () => {
                   </div>
                 </div>
               </Link>
-            ))}
+            ))
+            )}
           </div>
 
           {/* View All Button */}

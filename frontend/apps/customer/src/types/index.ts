@@ -65,6 +65,7 @@ export interface Provider {
   categories: string[];
   certificates: Certificate[];
   workingHours: WorkingHours;
+  packageCount?: number; // Number of packages associated with this provider
   createdAt: string;
   updatedAt: string;
 }

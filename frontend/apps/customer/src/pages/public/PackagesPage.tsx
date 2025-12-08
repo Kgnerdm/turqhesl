@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -17,6 +17,7 @@ import {
   Package as PackageIcon
 } from 'lucide-react';
 import { PACKAGE_CATEGORIES, TURKISH_CITIES, type Package } from '@/types';
+import { getPackages, type PackagesResponse } from '@/api/packages';
 
 // Category color mapping
 const categoryColors: Record<string, { bg: string; text: string }> = {
@@ -33,124 +34,6 @@ const categoryColors: Record<string, { bg: string; text: string }> = {
   cardiology: { bg: 'bg-amber-50', text: 'text-amber-700' },
   orthopedic: { bg: 'bg-lime-50', text: 'text-lime-700' },
 };
-
-// Mock data for development
-const mockPackages: Package[] = [
-  {
-    id: '1',
-    providerId: '1',
-    name: 'Premium Dental Implant Package',
-    description: 'Complete dental implant treatment with high-quality materials and expert care. Includes all consultations and follow-ups.',
-    category: 'dental',
-    price: 1500,
-    currency: 'USD',
-    duration: '5-7 days',
-    includes: ['Free consultation', 'Airport transfer', 'Hotel accommodation', 'Post-treatment care', 'Dental X-rays', '3D CT scan', 'Implant surgery', 'Follow-up care'],
-    excludes: ['Flight tickets', 'Personal expenses'],
-    images: ['https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=800'],
-    isActive: true,
-    rating: 0,
-    reviewCount: 0,
-    bookingCount: 89,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
-    provider: {
-      id: '1',
-      userId: '1',
-      businessName: 'Istanbul Dental Center',
-      description: 'Leading dental clinic',
-      city: 'Istanbul',
-      address: 'Nişantaşı, Istanbul',
-      phone: '+90 212 123 4567',
-      email: 'info@istanbuldental.com',
-      isVerified: true,
-      rating: 0,
-      reviewCount: 0,
-      categories: ['Dental'],
-      certificates: [],
-      workingHours: {} as any,
-      images: [],
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
-    },
-  },
-  {
-    id: '2',
-    providerId: '2',
-    name: 'FUE Hair Transplant - 3000 Grafts',
-    description: 'Advanced FUE hair transplant procedure with natural-looking results. Experienced surgeons and modern techniques.',
-    category: 'hair_transplant',
-    price: 2500,
-    currency: 'USD',
-    duration: '3-4 days',
-    includes: ['Consultation', 'Blood tests', 'FUE procedure', 'PRP treatment', 'Medications', 'Hotel stay', 'Airport transfer', 'Post-op kit', 'Follow-up visits'],
-    excludes: ['Flight tickets'],
-    images: ['https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800'],
-    isActive: true,
-    rating: 0,
-    reviewCount: 0,
-    bookingCount: 156,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
-    provider: {
-      id: '2',
-      userId: '2',
-      businessName: 'Hair Clinic Turkey',
-      description: 'Expert hair restoration',
-      city: 'Istanbul',
-      address: 'Şişli, Istanbul',
-      phone: '+90 212 234 5678',
-      email: 'info@hairclinic.com',
-      isVerified: true,
-      rating: 0,
-      reviewCount: 0,
-      categories: ['Hair Transplant'],
-      certificates: [],
-      workingHours: {} as any,
-      images: [],
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
-    },
-  },
-  {
-    id: '3',
-    providerId: '3',
-    name: 'LASIK Eye Surgery',
-    description: 'State-of-the-art LASIK surgery for vision correction. Quick procedure with fast recovery time.',
-    category: 'eye_surgery',
-    price: 1800,
-    currency: 'USD',
-    duration: '2-3 days',
-    includes: ['Pre-op examination', 'LASIK surgery (both eyes)', 'Post-op care', 'Medications', 'Follow-up visits', 'Protective glasses', 'Eye drops'],
-    excludes: ['Accommodation', 'Transport'],
-    images: ['https://images.unsplash.com/photo-1551076805-e1869033e561?w=800'],
-    isActive: true,
-    rating: 0,
-    reviewCount: 0,
-    bookingCount: 45,
-    createdAt: '2024-01-01',
-    updatedAt: '2024-01-01',
-    provider: {
-      id: '3',
-      userId: '3',
-      businessName: 'Vision Plus Eye Center',
-      description: 'Advanced eye care',
-      city: 'Ankara',
-      address: 'Çankaya, Ankara',
-      phone: '+90 312 345 6789',
-      email: 'info@visionplus.com',
-      isVerified: true,
-      rating: 0,
-      reviewCount: 0,
-      categories: ['Eye Surgery'],
-      certificates: [],
-      workingHours: {} as any,
-      images: [],
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01',
-    },
-  },
-];
 
 // Skeleton Card Component
 const PackageCardSkeleton = () => (
@@ -299,8 +182,10 @@ const EmptyState = ({ onClearFilters }: { onClearFilters: () => void }) => (
 const PackagesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [packages, setPackages] = useState<Package[]>([]);
+  const [pagination, setPagination] = useState<PackagesResponse['pagination'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Filter states
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -354,57 +239,47 @@ const PackagesPage = () => {
 
   const hasActiveFilters = activeFilters.length > 0;
 
-  // Load packages
-  useEffect(() => {
-    const loadPackages = async () => {
-      setIsLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  // Load packages from API
+  const loadPackages = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await getPackages({
+        search: search || undefined,
+        category: category as Package['category'] || undefined,
+        city: city || undefined,
+        minPrice: minPrice ? parseInt(minPrice) : undefined,
+        maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
+        sortBy: sortBy as 'price_asc' | 'price_desc' || undefined,
+        page: 1,
+        limit: 20,
+      });
       
-      let filtered = [...mockPackages];
+      let sortedPackages = [...response.data];
       
-      // Apply filters
-      if (category) {
-        filtered = filtered.filter((p) => p.category === category);
-      }
-      if (city) {
-        filtered = filtered.filter((p) => p.provider?.city === city);
-      }
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filtered = filtered.filter(
-          (p) =>
-            p.name.toLowerCase().includes(searchLower) ||
-            p.description.toLowerCase().includes(searchLower)
-        );
-      }
-      if (minPrice) {
-        filtered = filtered.filter((p) => p.price >= parseInt(minPrice));
-      }
-      if (maxPrice) {
-        filtered = filtered.filter((p) => p.price <= parseInt(maxPrice));
-      }
-      
-      // Apply sorting
-      if (sortBy === 'price_asc') {
-        filtered.sort((a, b) => a.price - b.price);
-      } else if (sortBy === 'price_desc') {
-        filtered.sort((a, b) => b.price - a.price);
-      } else if (sortBy === 'newest') {
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Client-side sorting for options backend doesn't support
+      if (sortBy === 'newest') {
+        sortedPackages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       } else if (sortBy === 'duration_short') {
-        // Simple parse for demo - would need proper duration parsing
-        filtered.sort((a, b) => a.duration.localeCompare(b.duration));
+        sortedPackages.sort((a, b) => a.duration.localeCompare(b.duration));
       } else if (sortBy === 'duration_long') {
-        filtered.sort((a, b) => b.duration.localeCompare(a.duration));
+        sortedPackages.sort((a, b) => b.duration.localeCompare(a.duration));
       }
       
-      setPackages(filtered);
+      setPackages(sortedPackages);
+      setPagination(response.pagination);
+    } catch (err) {
+      console.error('Failed to load packages:', err);
+      setError('Failed to load packages. Please try again.');
+    } finally {
       setIsLoading(false);
-    };
+    }
+  }, [search, category, city, sortBy, minPrice, maxPrice]);
 
+  useEffect(() => {
     loadPackages();
-  }, [category, city, search, sortBy, minPrice, maxPrice]);
+  }, [loadPackages]);
 
   // Update URL params
   const updateFilters = () => {
@@ -468,7 +343,7 @@ const PackagesPage = () => {
           <div className="flex items-center gap-6 mt-6">
             <div className="flex items-center gap-2 text-sm">
               <div className="w-2 h-2 bg-success rounded-full" />
-              <span className="text-gray-700">{packages.length} packages found</span>
+              <span className="text-gray-700">{pagination?.total || packages.length} packages found</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Shield className="w-4 h-4 text-primary" />
@@ -639,7 +514,7 @@ const PackagesPage = () => {
             {/* Mobile Filter Button */}
             <div className="lg:hidden flex items-center justify-between mb-4">
               <p className="text-sm text-gray-700 font-medium">
-                {packages.length} packages found
+                {pagination?.total || packages.length} packages found
               </p>
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -739,10 +614,23 @@ const PackagesPage = () => {
               </div>
             )}
 
+            {/* Error State */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                <p className="text-red-700">{error}</p>
+                <button 
+                  onClick={loadPackages}
+                  className="mt-2 text-sm font-medium text-red-600 hover:underline"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
             {/* Results Info Bar */}
             <div className="bg-gray-50 p-4 rounded-lg mb-6 flex justify-between items-center">
               <span className="text-sm font-medium text-gray-700">
-                {packages.length} packages found
+                {pagination?.total || packages.length} packages found
               </span>
             </div>
 
@@ -770,3 +658,4 @@ const PackagesPage = () => {
 };
 
 export default PackagesPage;
+
