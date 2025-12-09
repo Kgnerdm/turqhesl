@@ -178,6 +178,8 @@ export type BookingStatus =
   | 'cancelled'
   | 'refunded';
 
+export type PaymentStatus = 'pending' | 'paid' | 'refunded' | 'failed';
+
 export interface Booking {
   id: string;
   patientId: string;
@@ -187,35 +189,88 @@ export interface Booking {
   packageId: string;
   package?: Package;
   status: BookingStatus;
+  statusDisplay: string;
   bookingDate: string;
   appointmentDate: string;
+  appointmentTime?: string;
+  patientName: string;
+  patientEmail: string;
+  patientPhone: string;
   notes?: string;
+  providerNotes?: string;
   totalPrice: number;
   currency: string;
   paymentStatus: PaymentStatus;
+  paymentStatusDisplay: string;
+  confirmedAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  cancellationReason?: string;
+  isCancellable: boolean;
+  isConfirmable: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export type PaymentStatus = 'pending' | 'paid' | 'refunded' | 'failed';
+// Simplified booking for list views
+export interface BookingListItem {
+  id: string;
+  patientName: string;
+  patientEmail: string;
+  patientPhone: string;
+  packageName: string;
+  packageCategory: string;
+  providerName: string;
+  providerCity: string;
+  status: BookingStatus;
+  statusDisplay: string;
+  appointmentDate: string;
+  appointmentTime?: string;
+  totalPrice: number;
+  currency: string;
+  paymentStatus: PaymentStatus;
+  paymentStatusDisplay: string;
+  notes?: string;
+  createdAt: string;
+}
 
 export interface CreateBookingRequest {
-  packageId: string;
+  packageId: number;
   appointmentDate: string;
+  appointmentTime?: string;
+  patientName: string;
+  patientEmail: string;
+  patientPhone: string;
   notes?: string;
 }
 
 export interface UpdateBookingStatusRequest {
   status: BookingStatus;
   notes?: string;
+  cancellationReason?: string;
+}
+
+export interface CancelBookingRequest {
+  reason?: string;
 }
 
 export interface BookingFilters {
   status?: BookingStatus;
   startDate?: string;
   endDate?: string;
+  date?: string;
   page?: number;
   limit?: number;
+}
+
+export interface BookingStats {
+  total: number;
+  pending: number;
+  confirmed: number;
+  inProgress: number;
+  completed: number;
+  cancelled: number;
+  totalRevenue?: number;
 }
 
 // ============================================
