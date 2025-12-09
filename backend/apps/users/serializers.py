@@ -178,6 +178,79 @@ class AuthResponseSerializer(serializers.Serializer):
     tokens = TokenResponseSerializer()
 
 
+class UpdateProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating user profile.
+    
+    Only allows updating non-sensitive fields.
+    """
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'phone']
+
+    def validate_first_name(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError('First name cannot be empty.')
+        return value.strip()
+
+    def validate_last_name(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError('Last name cannot be empty.')
+        return value.strip()
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """
+    Serializer for password change.
+    
+    Validates current password and new password.
+    """
+
+    current_password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={'input_type': 'password'},
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={'input_type': 'password'},
+    )
+    confirm_password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={'input_type': 'password'},
+    )
+
+    def validate_current_password(self, value):
+        """Check that the current password is correct."""
+        user = self.context.get('request').user
+        if not user.check_password(value):
+            raise serializers.ValidationError('Current password is incorrect.')
+        return value
+
+    def validate_new_password(self, value):
+        """Validate new password using Django's password validators."""
+        validate_password(value)
+        return value
+
+    def validate(self, attrs):
+        """Check that new password and confirm password match."""
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({
+                'confirm_password': 'New passwords do not match.'
+            })
+        return attrs
+
+    def save(self):
+        """Update the user's password."""
+        user = self.context.get('request').user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
+
+
 def get_tokens_for_user(user):
     """
     Generate JWT tokens for a user.

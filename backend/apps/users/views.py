@@ -13,6 +13,8 @@ from .serializers import (
     LoginSerializer,
     RegisterSerializer,
     UserSerializer,
+    UpdateProfileSerializer,
+    ChangePasswordSerializer,
     get_tokens_for_user,
 )
 
@@ -152,7 +154,7 @@ class MeView(APIView):
         Allows partial update of user profile fields.
         Cannot update email, role, or sensitive fields.
         """
-        serializer = UserSerializer(
+        serializer = UpdateProfileSerializer(
             request.user,
             data=request.data,
             partial=True
@@ -165,7 +167,8 @@ class MeView(APIView):
             )
         
         serializer.save()
-        return Response(serializer.data)
+        # Return full user data
+        return Response(UserSerializer(request.user).data)
 
 
 class LogoutView(APIView):
@@ -206,4 +209,44 @@ class LogoutView(APIView):
                 {'detail': 'Invalid token.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class ChangePasswordView(APIView):
+    """
+    API endpoint for changing password.
+    
+    POST /api/auth/change-password/
+    
+    Changes the user's password after validating current password.
+    
+    Request Body:
+        - current_password: Current password (required)
+        - new_password: New password (required)
+        - confirm_password: New password confirmation (required)
+    
+    Response (200):
+        - detail: Success message
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """Handle password change."""
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer.save()
+        
+        return Response(
+            {'detail': 'Password changed successfully.'},
+            status=status.HTTP_200_OK
+        )
 

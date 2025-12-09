@@ -147,3 +147,26 @@ export const updateProfile = async (data: Partial<User>): Promise<User> => {
   const response = await api.patch<BackendUser>('/auth/me/', backendData);
   return transformUser(response.data);
 };
+
+/**
+ * Change password request
+ */
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+/**
+ * Change user password
+ */
+export const changePassword = async (data: ChangePasswordRequest): Promise<void> => {
+  // Transform to backend format (snake_case)
+  const backendData = {
+    current_password: data.currentPassword,
+    new_password: data.newPassword,
+    confirm_password: data.confirmPassword,
+  };
+  
+  await api.post('/auth/change-password/', backendData);
+};

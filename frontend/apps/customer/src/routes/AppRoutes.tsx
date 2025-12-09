@@ -22,6 +22,9 @@ const PackageManagement = lazy(() => import('@/pages/dashboard/provider/PackageM
 const BookingManagement = lazy(() => import('@/pages/dashboard/provider/BookingManagement'));
 const AdminDashboard = lazy(() => import('@/pages/dashboard/admin/AdminDashboard'));
 
+// Profile page
+const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'));
+
 /**
  * Suspense wrapper for lazy loaded components
  */
@@ -112,6 +115,20 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
+      {/* Profile route (for all authenticated users) */}
+      <Route element={<MainLayout />}>
+        <Route
+          path="profile"
+          element={
+            <ProtectedRoute>
+              <LazyPage>
+                <ProfilePage />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+      </Route>
 
       {/* Patient dashboard routes */}
       <Route element={<MainLayout hideFooter />}>
