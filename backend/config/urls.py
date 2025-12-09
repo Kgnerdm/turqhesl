@@ -18,6 +18,7 @@ urlpatterns = [
     path('api/auth/', include('apps.users.urls', namespace='users')),
     path('api/providers/', include('apps.providers.urls', namespace='providers')),
     path('api/packages/', include('apps.packages.urls', namespace='packages')),
+    path('api/bookings/', include('apps.bookings.urls', namespace='bookings')),
     
     # Nested endpoint: provider's packages
     path('api/providers/<int:provider_id>/packages/', ProviderPackagesView.as_view(), name='provider-packages'),
