@@ -11,6 +11,7 @@ from .views import (
     PackageDetailView,
     PackageListView,
     PackageUpdateView,
+    PackageToggleStatusView,
 )
 
 app_name = 'packages'
@@ -27,5 +28,6 @@ urlpatterns = [
     path('<int:pk>/', PackageDetailView.as_view(), name='detail'),
     path('<int:pk>/update/', PackageUpdateView.as_view(), name='update'),
     path('<int:pk>/delete/', PackageDeleteView.as_view(), name='delete'),
+    path('<int:pk>/toggle-status/', PackageToggleStatusView.as_view(), name='toggle-status'),
 ]
 

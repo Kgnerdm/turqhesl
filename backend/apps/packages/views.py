@@ -287,6 +287,42 @@ class MyPackagesView(APIView):
         return Response({'data': serializer.data})
 
 
+class PackageToggleStatusView(APIView):
+    """
+    API endpoint for toggling package active status.
+    
+    PATCH /api/packages/:id/toggle-status/
+    
+    Only the package owner can toggle status.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        """Toggle package is_active status."""
+        try:
+            package = Package.objects.select_related('provider').get(pk=pk)
+        except Package.DoesNotExist:
+            return Response(
+                {'detail': 'Package not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check ownership (or admin)
+        if package.provider.user != request.user and request.user.role != 'admin':
+            return Response(
+                {'detail': 'You do not have permission to update this package.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Toggle status
+        package.is_active = not package.is_active
+        package.save()
+        
+        serializer = PackageDetailSerializer(package)
+        return Response(serializer.data)
+
+
 class ProviderPackagesView(APIView):
     """
     API endpoint for a specific provider's packages.

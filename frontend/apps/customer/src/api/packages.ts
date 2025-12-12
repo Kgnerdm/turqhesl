@@ -272,6 +272,14 @@ export const deletePackage = async (id: string): Promise<void> => {
 };
 
 /**
+ * Toggle package active status
+ */
+export const togglePackageStatus = async (id: string): Promise<Package> => {
+  const response = await api.patch<BackendPackage>(`/packages/${id}/toggle-status/`);
+  return transformPackage(response.data);
+};
+
+/**
  * Get featured packages (for homepage)
  */
 export const getFeaturedPackages = async (limit = 6): Promise<Package[]> => {

@@ -4,127 +4,54 @@ import {
   Package, 
   Calendar, 
   DollarSign, 
-  Star,
   TrendingUp,
   Users,
   ArrowRight,
-  Plus
+  Plus,
+  AlertCircle,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, Card, Badge, CardSkeleton } from '@/components/ui';
 import { formatPrice, formatDate } from '@/utils/format';
-import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type Booking } from '@/types';
+import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingListItem, type BookingStats } from '@/types';
+import { getProviderBookings, getBookingStats } from '@/api/bookings';
 
 const ProviderDashboard = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalBookings: 0,
-    pendingBookings: 0,
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<BookingStats>({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    inProgress: 0,
+    completed: 0,
+    cancelled: 0,
     totalRevenue: 0,
-    averageRating: 0,
   });
-  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
+  const [recentBookings, setRecentBookings] = useState<BookingListItem[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      setIsLoading(true);
+      setError(null);
       
-      setStats({
-        totalBookings: 156,
-        pendingBookings: 8,
-        totalRevenue: 234500,
-        averageRating: 4.8,
-      });
-
-      setRecentBookings([
-        {
-          id: '1',
-          patientId: '10',
-          patient: {
-            id: '10',
-            email: 'john@example.com',
-            firstName: 'John',
-            lastName: 'Smith',
-            role: 'patient',
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-01',
-          },
-          providerId: '1',
-          packageId: '1',
-          status: 'pending',
-          bookingDate: '2024-01-20',
-          appointmentDate: '2024-02-15',
-          totalPrice: 1500,
-          currency: 'USD',
-          paymentStatus: 'pending',
-          createdAt: '2024-01-20',
-          updatedAt: '2024-01-20',
-          package: {
-            id: '1',
-            providerId: '1',
-            name: 'Premium Dental Implants',
-            description: '',
-            category: 'dental',
-            price: 1500,
-            currency: 'USD',
-            duration: '5-7 days',
-            includes: [],
-            excludes: [],
-            images: [],
-            isActive: true,
-            rating: 4.9,
-            reviewCount: 124,
-            bookingCount: 89,
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-01',
-          },
-        },
-        {
-          id: '2',
-          patientId: '11',
-          patient: {
-            id: '11',
-            email: 'emma@example.com',
-            firstName: 'Emma',
-            lastName: 'Wilson',
-            role: 'patient',
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-01',
-          },
-          providerId: '1',
-          packageId: '2',
-          status: 'confirmed',
-          bookingDate: '2024-01-18',
-          appointmentDate: '2024-02-10',
-          totalPrice: 3500,
-          currency: 'USD',
-          paymentStatus: 'paid',
-          createdAt: '2024-01-18',
-          updatedAt: '2024-01-19',
-          package: {
-            id: '2',
-            providerId: '1',
-            name: 'Hollywood Smile Package',
-            description: '',
-            category: 'dental',
-            price: 3500,
-            currency: 'USD',
-            duration: '7-10 days',
-            includes: [],
-            excludes: [],
-            images: [],
-            isActive: true,
-            rating: 4.8,
-            reviewCount: 67,
-            bookingCount: 45,
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-01',
-          },
-        },
-      ]);
-
-      setIsLoading(false);
+      try {
+        // Load stats and recent bookings in parallel
+        const [statsResponse, bookingsResponse] = await Promise.all([
+          getBookingStats(),
+          getProviderBookings({ limit: 5 }),
+        ]);
+        
+        setStats(statsResponse);
+        setRecentBookings(bookingsResponse.data);
+      } catch (err: any) {
+        console.error('Failed to load dashboard data:', err);
+        setError(err.response?.data?.detail || 'Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadData();
@@ -133,33 +60,46 @@ const ProviderDashboard = () => {
   const statCards = [
     { 
       label: 'Total Bookings', 
-      value: stats.totalBookings, 
+      value: stats.total, 
       icon: Calendar, 
       color: 'bg-blue-500',
-      change: '+12%'
     },
     { 
       label: 'Pending', 
-      value: stats.pendingBookings, 
+      value: stats.pending, 
       icon: Users, 
       color: 'bg-yellow-500',
-      change: '+3'
     },
     { 
       label: 'Revenue', 
-      value: formatPrice(stats.totalRevenue), 
+      value: formatPrice(stats.totalRevenue || 0), 
       icon: DollarSign, 
       color: 'bg-green-500',
-      change: '+18%'
     },
     { 
-      label: 'Rating', 
-      value: stats.averageRating.toFixed(1), 
-      icon: Star, 
+      label: 'Completed', 
+      value: stats.completed, 
+      icon: TrendingUp, 
       color: 'bg-purple-500',
-      change: '+0.2'
     },
   ];
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-12">
+            <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Dashboard</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -198,10 +138,6 @@ const ProviderDashboard = () => {
                     <p className="text-2xl font-bold text-gray-900 mt-1">
                       {stat.value}
                     </p>
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      {stat.change} this month
-                    </p>
                   </div>
                   <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center`}>
                     <stat.icon className="w-5 h-5 text-white" />
@@ -237,22 +173,26 @@ const ProviderDashboard = () => {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">Bookings</h3>
-                  <p className="text-sm text-gray-500">View and manage bookings</p>
+                  <p className="text-sm text-gray-500">
+                    {stats.pending > 0 
+                      ? `${stats.pending} pending bookings` 
+                      : 'View and manage bookings'}
+                  </p>
                 </div>
                 <ArrowRight className="w-5 h-5 text-gray-400" />
               </div>
             </Card>
           </Link>
 
-          <Link to="/dashboard/provider/profile">
+          <Link to="/profile">
             <Card hover className="h-full">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                  <Star className="w-6 h-6 text-purple-500" />
+                  <Building2 className="w-6 h-6 text-purple-500" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">Profile</h3>
-                  <p className="text-sm text-gray-500">Update your clinic profile</p>
+                  <p className="text-sm text-gray-500">Update your account</p>
                 </div>
                 <ArrowRight className="w-5 h-5 text-gray-400" />
               </div>
@@ -283,6 +223,9 @@ const ProviderDashboard = () => {
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">No bookings yet</p>
+              <p className="text-sm text-gray-400 mt-1">
+                When patients book your packages, they will appear here
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -301,15 +244,18 @@ const ProviderDashboard = () => {
                     <tr key={booking.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="py-4 px-4">
                         <p className="font-medium text-gray-900">
-                          {booking.patient?.firstName} {booking.patient?.lastName}
+                          {booking.patientName}
                         </p>
-                        <p className="text-sm text-gray-500">{booking.patient?.email}</p>
+                        <p className="text-sm text-gray-500">{booking.patientEmail}</p>
                       </td>
                       <td className="py-4 px-4">
-                        <p className="text-gray-900">{booking.package?.name}</p>
+                        <p className="text-gray-900">{booking.packageName}</p>
                       </td>
                       <td className="py-4 px-4">
                         <p className="text-gray-600">{formatDate(booking.appointmentDate)}</p>
+                        {booking.appointmentTime && (
+                          <p className="text-sm text-gray-400">{booking.appointmentTime}</p>
+                        )}
                       </td>
                       <td className="py-4 px-4">
                         <p className="font-medium text-gray-900">
@@ -334,4 +280,3 @@ const ProviderDashboard = () => {
 };
 
 export default ProviderDashboard;
-
