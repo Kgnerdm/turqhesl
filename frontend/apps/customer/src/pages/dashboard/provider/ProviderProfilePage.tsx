@@ -213,13 +213,21 @@ const ProviderProfilePage = () => {
       if (hasProfile && providerId) {
         // Update existing profile
         await updateProvider(providerId, providerData);
-        setSuccessMessage('Profile updated successfully!');
+        setSuccessMessage('Profile updated successfully! Redirecting...');
+        // Redirect after short delay to show success message
+        setTimeout(() => {
+          window.location.href = '/dashboard/provider';
+        }, 1500);
       } else {
         // Create new profile
         const newProvider = await createProvider(providerData);
         setHasProfile(true);
         setProviderId(newProvider.id);
-        setSuccessMessage('Profile created successfully!');
+        setSuccessMessage('Profile created successfully! Redirecting...');
+        // Redirect after short delay to show success message
+        setTimeout(() => {
+          window.location.href = '/dashboard/provider';
+        }, 1500);
       }
     } catch (err: any) {
       console.error('Failed to save provider:', err);
@@ -333,6 +341,7 @@ const ProviderProfilePage = () => {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <Input
+                  id="business-name"
                   label="Business Name *"
                   value={formData.businessName}
                   onChange={(e) => handleFieldChange('businessName', e.target.value)}
@@ -372,6 +381,7 @@ const ProviderProfilePage = () => {
 
               <div>
                 <Input
+                  id="address"
                   label="Address *"
                   value={formData.address}
                   onChange={(e) => handleFieldChange('address', e.target.value)}
@@ -396,6 +406,7 @@ const ProviderProfilePage = () => {
 
             <div className="grid md:grid-cols-2 gap-4">
               <Input
+                id="phone"
                 label="Phone Number *"
                 type="tel"
                 value={formData.phone}
@@ -405,6 +416,7 @@ const ProviderProfilePage = () => {
               />
 
               <Input
+                id="email"
                 label="Email Address *"
                 type="email"
                 value={formData.email}
@@ -415,6 +427,7 @@ const ProviderProfilePage = () => {
 
               <div className="md:col-span-2">
                 <Input
+                  id="website"
                   label="Website (Optional)"
                   type="url"
                   value={formData.website}
@@ -441,6 +454,7 @@ const ProviderProfilePage = () => {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Input
+                  id="logo-url"
                   label="Logo URL (Optional)"
                   type="url"
                   value={formData.logoUrl}
@@ -462,6 +476,7 @@ const ProviderProfilePage = () => {
 
               <div>
                 <Input
+                  id="cover-image-url"
                   label="Cover Image URL (Optional)"
                   type="url"
                   value={formData.coverImageUrl}

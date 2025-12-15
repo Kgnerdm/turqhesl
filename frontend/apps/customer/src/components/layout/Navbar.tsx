@@ -41,6 +41,15 @@ const Navbar = () => {
     }
   };
 
+  const getProfileLink = () => {
+    if (!user) return '/profile';
+    // Provider users go to provider profile, others go to user profile
+    if (user.role === 'provider') {
+      return '/dashboard/provider/profile';
+    }
+    return '/profile';
+  };
+
   return (
     <nav className="sticky top-0 z-40 bg-white border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,12 +116,12 @@ const Navbar = () => {
                         Dashboard
                       </Link>
                       <Link
-                        to="/profile"
+                        to={getProfileLink()}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => setIsProfileOpen(false)}
                       >
                         <User className="w-4 h-4" />
-                        Profile
+                        {user?.role === 'provider' ? 'Provider Profile' : 'Profile'}
                       </Link>
                       <hr className="my-1" />
                       <button
