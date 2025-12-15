@@ -184,15 +184,15 @@ const ProviderDashboard = () => {
             </Card>
           </Link>
 
-          <Link to="/profile">
+          <Link to="/dashboard/provider/profile">
             <Card hover className="h-full">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                   <Building2 className="w-6 h-6 text-purple-500" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">Profile</h3>
-                  <p className="text-sm text-gray-500">Update your account</p>
+                  <h3 className="font-semibold text-gray-900">Provider Profile</h3>
+                  <p className="text-sm text-gray-500">Manage your clinic info</p>
                 </div>
                 <ArrowRight className="w-5 h-5 text-gray-400" />
               </div>

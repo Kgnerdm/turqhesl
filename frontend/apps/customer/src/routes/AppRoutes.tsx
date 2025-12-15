@@ -20,6 +20,7 @@ const PatientDashboard = lazy(() => import('@/pages/dashboard/patient/PatientDas
 const ProviderDashboard = lazy(() => import('@/pages/dashboard/provider/ProviderDashboard'));
 const PackageManagement = lazy(() => import('@/pages/dashboard/provider/PackageManagement'));
 const BookingManagement = lazy(() => import('@/pages/dashboard/provider/BookingManagement'));
+const ProviderProfilePage = lazy(() => import('@/pages/dashboard/provider/ProviderProfilePage'));
 const AdminDashboard = lazy(() => import('@/pages/dashboard/admin/AdminDashboard'));
 
 // Profile page
@@ -172,6 +173,16 @@ const AppRoutes = () => {
             <ProtectedRoute allowedRoles={['provider']}>
               <LazyPage>
                 <BookingManagement />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard/provider/profile"
+          element={
+            <ProtectedRoute allowedRoles={['provider']}>
+              <LazyPage>
+                <ProviderProfilePage />
               </LazyPage>
             </ProtectedRoute>
           }
