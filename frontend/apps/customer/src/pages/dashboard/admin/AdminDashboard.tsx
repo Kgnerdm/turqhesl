@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Users, 
   Building2, 
@@ -6,97 +6,147 @@ import {
   CheckCircle, 
   XCircle, 
   Clock,
-  TrendingUp,
-  BadgeCheck
+  BadgeCheck,
+  RefreshCw,
+  DollarSign,
+  CalendarCheck
 } from 'lucide-react';
-import { Button, Card, Badge } from '@/components/ui';
-import { formatDate } from '@/utils/format';
+import { Button, Card, Badge, Loading } from '@/components/ui';
+import { formatDate, formatCurrency } from '@/utils/format';
 import type { Provider } from '@/types';
+import { 
+  getAdminStats, 
+  getPendingProviders, 
+  verifyProvider, 
+  rejectProvider,
+  type AdminStats 
+} from '@/api/providers';
 
 const AdminDashboard = () => {
-  const [pendingProviders, setPendingProviders] = useState<Provider[]>([
-    {
-      id: '4',
-      userId: '4',
-      businessName: 'Ankara Eye Center',
-      description: 'Specialized eye care center offering LASIK and cataract surgery.',
-      city: 'Ankara',
-      address: 'Çankaya, Ankara',
-      phone: '+90 312 456 7890',
-      email: 'info@ankaraeyecenter.com',
-      isVerified: false,
-      rating: 0,
-      reviewCount: 0,
-      categories: ['Eye Surgery'],
-      certificates: [
-        { id: '1', name: 'Ministry of Health License', issuedBy: 'Turkish Ministry of Health', issuedDate: '2023-01-01' },
-      ],
-      workingHours: {} as any,
-      images: [],
-      createdAt: '2024-01-20',
-      updatedAt: '2024-01-20',
-    },
-    {
-      id: '5',
-      userId: '5',
-      businessName: 'Izmir Fertility Clinic',
-      description: 'Leading fertility treatment center with high success rates.',
-      city: 'Izmir',
-      address: 'Alsancak, Izmir',
-      phone: '+90 232 567 8901',
-      email: 'info@izmirfertility.com',
-      isVerified: false,
-      rating: 0,
-      reviewCount: 0,
-      categories: ['Fertility Treatment'],
-      certificates: [],
-      workingHours: {} as any,
-      images: [],
-      createdAt: '2024-01-19',
-      updatedAt: '2024-01-19',
-    },
-  ]);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [pendingProviders, setPendingProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const stats = [
-    { label: 'Total Users', value: '12,345', icon: Users, color: 'bg-blue-500', change: '+5%' },
-    { label: 'Active Providers', value: '523', icon: Building2, color: 'bg-green-500', change: '+12%' },
-    { label: 'Total Packages', value: '1,847', icon: Package, color: 'bg-purple-500', change: '+8%' },
-    { label: 'Pending Approvals', value: pendingProviders.length.toString(), icon: Clock, color: 'bg-yellow-500', change: '' },
-  ];
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [statsData, pendingData] = await Promise.all([
+        getAdminStats(),
+        getPendingProviders(1, 20),
+      ]);
+      
+      setStats(statsData);
+      setPendingProviders(pendingData.data);
+    } catch (err) {
+      console.error('Error fetching admin data:', err);
+      setError('Failed to load dashboard data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleVerify = (id: string) => {
-    setPendingProviders(pendingProviders.filter((p) => p.id !== id));
-    // In real app, call API to verify provider
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleVerify = async (id: string) => {
+    try {
+      setActionLoading(id);
+      await verifyProvider(id, true);
+      setPendingProviders(pendingProviders.filter((p) => p.id !== id));
+      // Refresh stats after verification
+      const newStats = await getAdminStats();
+      setStats(newStats);
+    } catch (err) {
+      console.error('Error verifying provider:', err);
+      alert('Failed to verify provider. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const handleReject = (id: string) => {
-    setPendingProviders(pendingProviders.filter((p) => p.id !== id));
-    // In real app, call API to reject provider
+  const handleReject = async (id: string) => {
+    const reason = window.prompt('Enter rejection reason (optional):');
+    try {
+      setActionLoading(id);
+      await rejectProvider(id, reason || undefined);
+      setPendingProviders(pendingProviders.filter((p) => p.id !== id));
+      // Refresh stats after rejection
+      const newStats = await getAdminStats();
+      setStats(newStats);
+    } catch (err) {
+      console.error('Error rejecting provider:', err);
+      alert('Failed to reject provider. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
   };
+
+  const statsCards = stats ? [
+    { label: 'Total Users', value: stats.users.total.toLocaleString(), icon: Users, color: 'bg-blue-500', subtext: `${stats.users.patients} patients, ${stats.users.providers} providers` },
+    { label: 'Active Providers', value: stats.providers.active.toLocaleString(), icon: Building2, color: 'bg-green-500', subtext: `${stats.providers.verified} verified` },
+    { label: 'Total Packages', value: stats.packages.total.toLocaleString(), icon: Package, color: 'bg-purple-500', subtext: `${stats.packages.active} active` },
+    { label: 'Pending Approvals', value: stats.providers.pending.toString(), icon: Clock, color: 'bg-yellow-500', subtext: '' },
+    { label: 'Total Bookings', value: stats.bookings.total.toLocaleString(), icon: CalendarCheck, color: 'bg-indigo-500', subtext: `${stats.bookings.pending} pending` },
+    { label: 'Total Revenue', value: formatCurrency(stats.revenue.total), icon: DollarSign, color: 'bg-emerald-500', subtext: `${stats.bookings.completed} completed` },
+  ] : [];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loading size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={fetchData} leftIcon={<RefreshCw className="w-4 h-4" />}>
+            Try Again
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-1">
-            Platform overview and provider management
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-gray-600 mt-1">
+              Platform overview and provider management
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={fetchData}
+            leftIcon={<RefreshCw className="w-4 h-4" />}
+          >
+            Refresh
+          </Button>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {statsCards.map((stat) => (
             <Card key={stat.label}>
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm text-gray-500">{stat.label}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                  {stat.change && (
-                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      {stat.change} this month
+                  {stat.subtext && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {stat.subtext}
                     </p>
                   )}
                 </div>
@@ -199,16 +249,18 @@ const AdminDashboard = () => {
                     <div className="flex lg:flex-col gap-3">
                       <Button
                         onClick={() => handleVerify(provider.id)}
-                        leftIcon={<CheckCircle className="w-4 h-4" />}
+                        leftIcon={actionLoading === provider.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                         className="flex-1 lg:flex-none"
+                        disabled={actionLoading !== null}
                       >
-                        Verify
+                        {actionLoading === provider.id ? 'Verifying...' : 'Verify'}
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => handleReject(provider.id)}
                         leftIcon={<XCircle className="w-4 h-4" />}
                         className="flex-1 lg:flex-none text-error border-error hover:bg-red-50"
+                        disabled={actionLoading !== null}
                       >
                         Reject
                       </Button>

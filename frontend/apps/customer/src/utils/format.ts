@@ -13,6 +13,11 @@ export const formatPrice = (price: number, currency = 'USD'): string => {
 };
 
 /**
+ * Alias for formatPrice - Format currency value
+ */
+export const formatCurrency = formatPrice;
+
+/**
  * Format price range
  */
 export const formatPriceRange = (min: number, max: number, currency = 'USD'): string => {

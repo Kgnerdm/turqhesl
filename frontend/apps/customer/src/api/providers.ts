@@ -236,3 +236,114 @@ export interface ProviderStats {
   monthlyBookings: { month: string; count: number }[];
   revenueByMonth: { month: string; amount: number }[];
 }
+
+// ==================== ADMIN API ====================
+
+/**
+ * Backend admin stats response
+ */
+interface BackendAdminStats {
+  users: {
+    total: number;
+    patients: number;
+    providers: number;
+    admins: number;
+  };
+  providers: {
+    total: number;
+    verified: number;
+    pending: number;
+    active: number;
+  };
+  packages: {
+    total: number;
+    active: number;
+  };
+  bookings: {
+    total: number;
+    pending: number;
+    completed: number;
+  };
+  revenue: {
+    total: number;
+  };
+}
+
+/**
+ * Frontend admin stats type
+ */
+export interface AdminStats {
+  users: {
+    total: number;
+    patients: number;
+    providers: number;
+    admins: number;
+  };
+  providers: {
+    total: number;
+    verified: number;
+    pending: number;
+    active: number;
+  };
+  packages: {
+    total: number;
+    active: number;
+  };
+  bookings: {
+    total: number;
+    pending: number;
+    completed: number;
+  };
+  revenue: {
+    total: number;
+  };
+}
+
+/**
+ * Get admin dashboard statistics (admin only)
+ */
+export const getAdminStats = async (): Promise<AdminStats> => {
+  const response = await api.get<BackendAdminStats>('/providers/admin/stats/');
+  return response.data;
+};
+
+/**
+ * Get pending providers for verification (admin only)
+ */
+export const getPendingProviders = async (page = 1, limit = 10): Promise<ProvidersResponse> => {
+  const response = await api.get<BackendPaginatedResponse>('/providers/admin/pending/', {
+    params: { page, limit },
+  });
+  
+  return {
+    data: response.data.data.map(transformProvider),
+    pagination: {
+      page: response.data.pagination.page,
+      limit: response.data.pagination.limit,
+      total: response.data.pagination.total,
+      totalPages: response.data.pagination.total_pages,
+      hasNext: response.data.pagination.has_next,
+      hasPrev: response.data.pagination.has_prev,
+    },
+  };
+};
+
+/**
+ * Verify a provider (admin only)
+ */
+export const verifyProvider = async (id: string, isVerified = true): Promise<Provider> => {
+  const response = await api.post<BackendProvider>(`/providers/${id}/verify/`, {
+    is_verified: isVerified,
+  });
+  return transformProvider(response.data);
+};
+
+/**
+ * Reject a provider (admin only)
+ */
+export const rejectProvider = async (id: string, reason?: string): Promise<{ detail: string; reason: string }> => {
+  const response = await api.post<{ detail: string; reason: string }>(`/providers/${id}/reject/`, {
+    reason,
+  });
+  return response.data;
+};
