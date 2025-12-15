@@ -10,6 +10,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsAdminUser, IsProvider
+from apps.users.models import User
+from apps.packages.models import Package
+from apps.bookings.models import Booking
 from .models import Provider
 from .serializers import (
     ProviderCreateSerializer,
@@ -271,4 +274,150 @@ class MyProviderView(APIView):
 
 # Import models for Q filter
 from django.db import models
+
+
+class AdminStatsView(APIView):
+    """
+    API endpoint for admin dashboard statistics.
+    
+    GET /api/providers/admin/stats/
+    
+    Returns platform-wide statistics (admin only).
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        """Get platform statistics."""
+        # User stats
+        total_users = User.objects.count()
+        patient_count = User.objects.filter(role='patient').count()
+        provider_user_count = User.objects.filter(role='provider').count()
+        admin_count = User.objects.filter(role='admin').count()
+        
+        # Provider stats
+        total_providers = Provider.objects.count()
+        verified_providers = Provider.objects.filter(is_verified=True).count()
+        pending_providers = Provider.objects.filter(is_verified=False, is_active=True).count()
+        active_providers = Provider.objects.filter(is_active=True).count()
+        
+        # Package stats
+        total_packages = Package.objects.count()
+        active_packages = Package.objects.filter(is_active=True).count()
+        
+        # Booking stats
+        total_bookings = Booking.objects.count()
+        pending_bookings = Booking.objects.filter(status=Booking.Status.PENDING).count()
+        completed_bookings = Booking.objects.filter(status=Booking.Status.COMPLETED).count()
+        
+        # Revenue stats
+        from django.db.models import Sum
+        total_revenue = Booking.objects.filter(
+            status=Booking.Status.COMPLETED,
+            payment_status=Booking.PaymentStatus.PAID
+        ).aggregate(total=Sum('total_price'))['total'] or 0
+        
+        return Response({
+            'users': {
+                'total': total_users,
+                'patients': patient_count,
+                'providers': provider_user_count,
+                'admins': admin_count,
+            },
+            'providers': {
+                'total': total_providers,
+                'verified': verified_providers,
+                'pending': pending_providers,
+                'active': active_providers,
+            },
+            'packages': {
+                'total': total_packages,
+                'active': active_packages,
+            },
+            'bookings': {
+                'total': total_bookings,
+                'pending': pending_bookings,
+                'completed': completed_bookings,
+            },
+            'revenue': {
+                'total': float(total_revenue),
+            }
+        })
+
+
+class AdminPendingProvidersView(APIView):
+    """
+    API endpoint for listing pending provider verifications.
+    
+    GET /api/providers/admin/pending/
+    
+    Returns providers awaiting verification (admin only).
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        """Get pending providers for verification."""
+        queryset = Provider.objects.filter(
+            is_verified=False,
+            is_active=True
+        ).annotate(
+            active_package_count=Count('packages', filter=models.Q(packages__is_active=True))
+        ).order_by('-created_at')
+        
+        # Pagination
+        page = int(request.query_params.get('page', 1))
+        limit = int(request.query_params.get('limit', 10))
+        offset = (page - 1) * limit
+        
+        total = queryset.count()
+        providers = queryset[offset:offset + limit]
+        
+        serializer = ProviderDetailSerializer(providers, many=True)
+        
+        return Response({
+            'data': serializer.data,
+            'pagination': {
+                'page': page,
+                'limit': limit,
+                'total': total,
+                'total_pages': (total + limit - 1) // limit,
+                'has_next': offset + limit < total,
+                'has_prev': page > 1,
+            }
+        })
+
+
+class AdminRejectProviderView(APIView):
+    """
+    API endpoint for rejecting a provider (admin only).
+    
+    POST /api/providers/:id/reject/
+    
+    Deactivates the provider (soft delete).
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, pk):
+        """Reject a provider application by deactivating it."""
+        try:
+            provider = Provider.objects.get(pk=pk)
+        except Provider.DoesNotExist:
+            return Response(
+                {'detail': 'Provider not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get rejection reason if provided
+        rejection_reason = request.data.get('reason', 'Application rejected by administrator.')
+        
+        # Deactivate the provider
+        provider.is_active = False
+        provider.save()
+        
+        return Response({
+            'detail': 'Provider application rejected successfully.',
+            'reason': rejection_reason
+        })
 

@@ -5,6 +5,9 @@ URL configuration for the providers app.
 from django.urls import path
 
 from .views import (
+    AdminPendingProvidersView,
+    AdminRejectProviderView,
+    AdminStatsView,
     MyProviderView,
     ProviderCreateView,
     ProviderDetailView,
@@ -23,11 +26,16 @@ urlpatterns = [
     # Current user's provider profile
     path('me/', MyProviderView.as_view(), name='me'),
     
+    # Admin endpoints (must be before <int:pk>/ to avoid conflicts)
+    path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
+    path('admin/pending/', AdminPendingProvidersView.as_view(), name='admin-pending'),
+    
     # Detail and Update
     path('<int:pk>/', ProviderDetailView.as_view(), name='detail'),
     path('<int:pk>/update/', ProviderUpdateView.as_view(), name='update'),
     
     # Admin actions
     path('<int:pk>/verify/', ProviderVerifyView.as_view(), name='verify'),
+    path('<int:pk>/reject/', AdminRejectProviderView.as_view(), name='reject'),
 ]
 
