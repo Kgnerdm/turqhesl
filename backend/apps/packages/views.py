@@ -265,6 +265,9 @@ class MyPackagesView(APIView):
     API endpoint for current provider's packages.
     
     GET /api/packages/my/
+    
+    Query Parameters:
+        - include_inactive: Include deleted/inactive packages (default: false)
     """
 
     permission_classes = [IsAuthenticated, IsProvider]
@@ -281,8 +284,9 @@ class MyPackagesView(APIView):
             provider=request.user.provider_profile
         ).order_by('-created_at')
         
-        # Include inactive packages for the owner
-        include_inactive = request.query_params.get('include_inactive', 'true')
+        # By default, only show active packages (not deleted)
+        # Pass include_inactive=true to see deleted packages
+        include_inactive = request.query_params.get('include_inactive', 'false')
         if include_inactive.lower() not in ('true', '1', 'yes'):
             packages = packages.filter(is_active=True)
         
