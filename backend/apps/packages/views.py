@@ -396,15 +396,27 @@ class FavoriteListView(APIView):
 
 class FavoriteToggleView(APIView):
     """
-    API endpoint for toggling favorite status.
+    API endpoint for favorite status.
+    
+    GET /api/packages/:id/favorite/
+    - Check if package is favorited
     
     POST /api/packages/:id/favorite/
-    
-    If package is favorited, removes it. If not, adds it.
-    Returns the new favorite status.
+    - Toggle favorite status (add/remove)
     """
 
     permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        """Check if package is favorited by current user."""
+        is_favorited = Favorite.objects.filter(
+            user=request.user,
+            package_id=pk
+        ).exists()
+        
+        return Response({
+            'is_favorited': is_favorited
+        })
 
     def post(self, request, pk):
         """Toggle favorite status for a package."""

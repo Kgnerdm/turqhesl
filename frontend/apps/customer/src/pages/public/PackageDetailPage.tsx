@@ -21,7 +21,7 @@ import { Button, Card, Badge, PageLoading, Modal, Input } from '@/components/ui'
 import { formatPrice } from '@/utils/format';
 import { PACKAGE_CATEGORIES, type Package, type CreateBookingRequest } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPackage } from '@/api/packages';
+import { getPackage, toggleFavorite, checkFavorite } from '@/api/packages';
 import { createBooking } from '@/api/bookings';
 
 const PackageDetailPage = () => {
@@ -31,6 +31,10 @@ const PackageDetailPage = () => {
   const [package_, setPackage] = useState<Package | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Favorite state
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   
   // Booking modal state
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -69,6 +73,46 @@ const PackageDetailPage = () => {
 
     loadPackage();
   }, [id]);
+
+  // Check favorite status
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!id || !isAuthenticated) {
+        setIsFavorited(false);
+        return;
+      }
+      
+      try {
+        const favorited = await checkFavorite(id);
+        setIsFavorited(favorited);
+      } catch (err) {
+        console.error('Failed to check favorite status:', err);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [id, isAuthenticated]);
+
+  // Handle favorite toggle
+  const handleFavoriteToggle = async () => {
+    if (!id) return;
+    
+    if (!isAuthenticated) {
+      navigate('/auth/login', { state: { from: `/packages/${id}` } });
+      return;
+    }
+    
+    setIsFavoriteLoading(true);
+    
+    try {
+      const result = await toggleFavorite(id);
+      setIsFavorited(result.isFavorited);
+    } catch (err) {
+      console.error('Failed to toggle favorite:', err);
+    } finally {
+      setIsFavoriteLoading(false);
+    }
+  };
 
   // Pre-fill user data when modal opens
   useEffect(() => {
@@ -307,8 +351,17 @@ const PackageDetailPage = () => {
                   Book Now
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1">
-                    <Heart className="w-4 h-4" />
+                  <Button 
+                    variant="outline" 
+                    className={`flex-1 ${isFavorited ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100' : ''}`}
+                    onClick={handleFavoriteToggle}
+                    disabled={isFavoriteLoading}
+                  >
+                    {isFavoriteLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+                    )}
                   </Button>
                   <Button variant="outline" className="flex-1">
                     <Share2 className="w-4 h-4" />

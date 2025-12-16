@@ -263,22 +263,27 @@ const PackagesPage = () => {
   
   // Load favorite IDs for authenticated users
   useEffect(() => {
+    console.log('[FAVORITES] Effect triggered - isAuthenticated:', isAuthenticated, 'user role:', user?.role);
+    
     const loadFavorites = async () => {
       if (!isAuthenticated) {
+        console.log('[FAVORITES] Not authenticated, skipping');
         setFavoriteIds(new Set());
         return;
       }
       
       try {
+        console.log('[FAVORITES] Fetching favorite IDs...');
         const ids = await getFavoriteIds();
+        console.log('[FAVORITES] Got favorite IDs:', ids);
         setFavoriteIds(new Set(ids));
       } catch (error) {
-        console.error('Failed to load favorites:', error);
+        console.error('[FAVORITES] Failed to load favorites:', error);
       }
     };
     
     loadFavorites();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
   
   // Handle favorite toggle
   const handleToggleFavorite = useCallback(async (packageId: string) => {
