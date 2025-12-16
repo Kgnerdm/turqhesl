@@ -2,8 +2,12 @@
 Views for the users app.
 
 Handles user authentication endpoints: register, login, and profile.
+Also includes admin user management endpoints.
 """
 
+from datetime import timedelta
+from django.db.models import Q
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -259,24 +263,71 @@ class ChangePasswordView(APIView):
 # ADMIN VIEWS
 # ============================================
 
+class AdminUserStatsView(APIView):
+    """
+    API endpoint for admin user statistics.
+    
+    GET /api/auth/admin/stats/
+    
+    Returns user statistics for admin dashboard.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        """Get user statistics."""
+        now = timezone.now()
+        week_ago = now - timedelta(days=7)
+        month_ago = now - timedelta(days=30)
+        
+        # Total counts
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True).count()
+        inactive_users = User.objects.filter(is_active=False).count()
+        
+        # By role
+        patient_count = User.objects.filter(role='patient').count()
+        provider_count = User.objects.filter(role='provider').count()
+        admin_count = User.objects.filter(role='admin').count()
+        
+        # New users
+        new_this_week = User.objects.filter(created_at__gte=week_ago).count()
+        new_this_month = User.objects.filter(created_at__gte=month_ago).count()
+        
+        return Response({
+            'total': total_users,
+            'active': active_users,
+            'inactive': inactive_users,
+            'by_role': {
+                'patient': patient_count,
+                'provider': provider_count,
+                'admin': admin_count,
+            },
+            'new_this_week': new_this_week,
+            'new_this_month': new_this_month,
+        })
+
+
 class AdminUserListView(APIView):
     """
-    API endpoint for admin to list all users.
+    API endpoint for admin user management.
     
     GET /api/auth/admin/users/
     
+    List all users with pagination and filtering.
+    
     Query Parameters:
+        - page: Page number (default: 1)
+        - limit: Items per page (default: 10)
         - role: Filter by role (patient, provider, admin)
         - is_active: Filter by active status (true/false)
         - search: Search in email, first_name, last_name
-        - page: Page number (default: 1)
-        - limit: Items per page (default: 10)
     """
-    
+
     permission_classes = [IsAuthenticated, IsAdminUser]
-    
+
     def get(self, request):
-        """List all users with optional filters."""
+        """List users with pagination and filtering."""
         queryset = User.objects.all()
         
         # Apply filters
@@ -291,7 +342,6 @@ class AdminUserListView(APIView):
         
         search = request.query_params.get('search')
         if search:
-            from django.db.models import Q
             queryset = queryset.filter(
                 Q(email__icontains=search) |
                 Q(first_name__icontains=search) |
@@ -299,13 +349,7 @@ class AdminUserListView(APIView):
             )
         
         # Ordering
-        sort_by = request.query_params.get('sort_by', 'newest')
-        if sort_by == 'email':
-            queryset = queryset.order_by('email')
-        elif sort_by == 'name':
-            queryset = queryset.order_by('first_name', 'last_name')
-        else:  # newest (default)
-            queryset = queryset.order_by('-created_at')
+        queryset = queryset.order_by('-created_at')
         
         # Pagination
         page = int(request.query_params.get('page', 1))
@@ -332,17 +376,17 @@ class AdminUserListView(APIView):
 
 class AdminUserDetailView(APIView):
     """
-    API endpoint for admin to view/update/delete a user.
+    API endpoint for admin user detail.
     
     GET /api/auth/admin/users/:id/
     PATCH /api/auth/admin/users/:id/
     DELETE /api/auth/admin/users/:id/
     """
-    
+
     permission_classes = [IsAuthenticated, IsAdminUser]
-    
+
     def get(self, request, pk):
-        """Get user details by ID."""
+        """Get user detail by ID."""
         try:
             user = User.objects.get(pk=pk)
         except User.DoesNotExist:
@@ -353,9 +397,9 @@ class AdminUserDetailView(APIView):
         
         serializer = AdminUserSerializer(user)
         return Response(serializer.data)
-    
+
     def patch(self, request, pk):
-        """Update user details."""
+        """Update user by ID."""
         try:
             user = User.objects.get(pk=pk)
         except User.DoesNotExist:
@@ -365,7 +409,7 @@ class AdminUserDetailView(APIView):
             )
         
         # Prevent admin from deactivating themselves
-        if user == request.user and request.data.get('is_active') == False:
+        if user == request.user and request.data.get('is_active') is False:
             return Response(
                 {'detail': 'You cannot deactivate your own account.'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -385,10 +429,12 @@ class AdminUserDetailView(APIView):
             )
         
         serializer.save()
+        
+        # Return updated user with full data
         return Response(AdminUserSerializer(user).data)
-    
+
     def delete(self, request, pk):
-        """Delete a user (soft delete by deactivating)."""
+        """Delete (deactivate) user by ID."""
         try:
             user = User.objects.get(pk=pk)
         except User.DoesNotExist:
@@ -404,7 +450,7 @@ class AdminUserDetailView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Soft delete - deactivate the user
+        # Soft delete - just deactivate
         user.is_active = False
         user.save()
         
@@ -412,48 +458,4 @@ class AdminUserDetailView(APIView):
             {'detail': 'User has been deactivated.'},
             status=status.HTTP_200_OK
         )
-
-
-class AdminUserStatsView(APIView):
-    """
-    API endpoint for user statistics (admin only).
-    
-    GET /api/auth/admin/stats/
-    """
-    
-    permission_classes = [IsAuthenticated, IsAdminUser]
-    
-    def get(self, request):
-        """Get user statistics."""
-        from django.db.models import Count
-        from django.utils import timezone
-        from datetime import timedelta
-        
-        total_users = User.objects.count()
-        active_users = User.objects.filter(is_active=True).count()
-        
-        # Users by role
-        role_stats = User.objects.values('role').annotate(count=Count('id'))
-        role_counts = {stat['role']: stat['count'] for stat in role_stats}
-        
-        # New users in last 7 days
-        week_ago = timezone.now() - timedelta(days=7)
-        new_users_week = User.objects.filter(created_at__gte=week_ago).count()
-        
-        # New users in last 30 days
-        month_ago = timezone.now() - timedelta(days=30)
-        new_users_month = User.objects.filter(created_at__gte=month_ago).count()
-        
-        return Response({
-            'total': total_users,
-            'active': active_users,
-            'inactive': total_users - active_users,
-            'by_role': {
-                'patient': role_counts.get('patient', 0),
-                'provider': role_counts.get('provider', 0),
-                'admin': role_counts.get('admin', 0),
-            },
-            'new_this_week': new_users_week,
-            'new_this_month': new_users_month,
-        })
 

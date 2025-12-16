@@ -267,3 +267,64 @@ def get_tokens_for_user(user):
         'refresh': str(refresh),
     }
 
+
+# ============================================
+# ADMIN SERIALIZERS
+# ============================================
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for admin user management.
+    
+    Includes all user fields including staff status.
+    """
+    
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'full_name',
+            'role',
+            'phone',
+            'is_active',
+            'is_staff',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'email', 'created_at', 'updated_at']
+    
+    def get_full_name(self, obj):
+        return obj.get_full_name()
+
+
+class AdminUserUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for admin to update user fields.
+    
+    Allows updating role, is_active, and basic info.
+    """
+
+    class Meta:
+        model = User
+        fields = [
+            'first_name',
+            'last_name',
+            'role',
+            'phone',
+            'is_active',
+        ]
+
+    def validate_role(self, value):
+        """Prevent changing to admin role unless current user is superuser."""
+        request = self.context.get('request')
+        if value == UserRole.ADMIN and not request.user.is_superuser:
+            raise serializers.ValidationError(
+                'Only superusers can assign admin role.'
+            )
+        return value
+

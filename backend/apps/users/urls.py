@@ -9,11 +9,11 @@ Authentication endpoints:
 - GET/PATCH /me/ - Current user profile
 
 Admin endpoints:
-- GET /admin/users/ - List all users
-- GET /admin/users/:id/ - User details
+- GET /admin/stats/ - User statistics
+- GET /admin/users/ - List users
+- GET /admin/users/:id/ - User detail
 - PATCH /admin/users/:id/ - Update user
 - DELETE /admin/users/:id/ - Delete user
-- GET /admin/stats/ - User statistics
 """
 
 from django.urls import path
@@ -25,9 +25,9 @@ from .views import (
     MeView,
     RegisterView,
     ChangePasswordView,
+    AdminUserStatsView,
     AdminUserListView,
     AdminUserDetailView,
-    AdminUserStatsView,
 )
 
 app_name = 'users'
@@ -43,9 +43,9 @@ urlpatterns = [
     path('me/', MeView.as_view(), name='me'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
     
-    # Admin endpoints
+    # Admin - User Management
+    path('admin/stats/', AdminUserStatsView.as_view(), name='admin_user_stats'),
     path('admin/users/', AdminUserListView.as_view(), name='admin_user_list'),
     path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin_user_detail'),
-    path('admin/stats/', AdminUserStatsView.as_view(), name='admin_user_stats'),
 ]
 
