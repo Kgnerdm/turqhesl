@@ -405,3 +405,116 @@ export const checkFavorite = async (packageId: string): Promise<boolean> => {
   const response = await api.get<{ is_favorited: boolean }>(`/packages/${packageId}/favorite/`);
   return response.data.is_favorited;
 };
+
+
+// ============================================
+// SEARCH API
+// ============================================
+
+/**
+ * Search suggestion item for packages
+ */
+export interface PackageSuggestion {
+  id: number;
+  name: string;
+  category: string;
+  categoryDisplay: string;
+  price: string;
+  currency: string;
+  providerName: string;
+  providerCity: string;
+  providerIsVerified: boolean;
+  image: string | null;
+  type: 'package';
+}
+
+/**
+ * Search suggestion item for providers
+ */
+export interface ProviderSuggestion {
+  id: number;
+  name: string;
+  city: string;
+  categories: string[];
+  isVerified: boolean;
+  packageCount: number;
+  logoUrl: string | null;
+  type: 'provider';
+}
+
+/**
+ * Search suggestions response
+ */
+export interface SearchSuggestionsResponse {
+  packages: PackageSuggestion[];
+  providers: ProviderSuggestion[];
+  query: string;
+  total: number;
+}
+
+/**
+ * Get search suggestions for autocomplete
+ */
+export const getSearchSuggestions = async (query: string): Promise<SearchSuggestionsResponse> => {
+  if (query.length < 2) {
+    return { packages: [], providers: [], query, total: 0 };
+  }
+  
+  const response = await api.get<{
+    packages: Array<{
+      id: number;
+      name: string;
+      category: string;
+      category_display: string;
+      price: string;
+      currency: string;
+      provider_name: string;
+      provider_city: string;
+      provider_is_verified: boolean;
+      image: string | null;
+      type: 'package';
+    }>;
+    providers: Array<{
+      id: number;
+      name: string;
+      city: string;
+      categories: string[];
+      is_verified: boolean;
+      package_count: number;
+      logo_url: string | null;
+      type: 'provider';
+    }>;
+    query: string;
+    total: number;
+  }>('/packages/search/suggestions/', {
+    params: { q: query },
+  });
+  
+  return {
+    packages: response.data.packages.map((pkg) => ({
+      id: pkg.id,
+      name: pkg.name,
+      category: pkg.category,
+      categoryDisplay: pkg.category_display,
+      price: pkg.price,
+      currency: pkg.currency,
+      providerName: pkg.provider_name,
+      providerCity: pkg.provider_city,
+      providerIsVerified: pkg.provider_is_verified,
+      image: pkg.image,
+      type: 'package' as const,
+    })),
+    providers: response.data.providers.map((prov) => ({
+      id: prov.id,
+      name: prov.name,
+      city: prov.city,
+      categories: prov.categories,
+      isVerified: prov.is_verified,
+      packageCount: prov.package_count,
+      logoUrl: prov.logo_url,
+      type: 'provider' as const,
+    })),
+    query: response.data.query,
+    total: response.data.total,
+  };
+};

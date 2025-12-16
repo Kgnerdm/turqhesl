@@ -73,6 +73,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       setUser(response.user);
+    } catch (error) {
+      // Re-throw so the calling component can handle the error
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +101,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       setUser(response.user);
+    } catch (error) {
+      // Re-throw so the calling component can handle the error
+      throw error;
     } finally {
       setIsLoading(false);
     }

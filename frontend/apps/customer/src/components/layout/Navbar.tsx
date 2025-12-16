@@ -1,16 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, LogOut, LayoutDashboard, Heart } from 'lucide-react';
+import { Menu, X, User, LogOut, LayoutDashboard, Heart, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button, Avatar } from '@/components/ui';
+import { Button, Avatar, SearchAutocomplete } from '@/components/ui';
 import { cn } from '@/utils/cn';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Keyboard shortcut for search (Cmd+K or Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const navLinks = [
     { href: '/', label: 'Home' },
@@ -80,8 +97,19 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Desktop Auth Buttons */}
+          {/* Desktop Search & Auth */}
           <div className="hidden md:flex items-center gap-4">
+            {/* Search Button */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-gray-600"
+            >
+              <Search className="w-4 h-4" />
+              <span className="text-sm">Search...</span>
+              <kbd className="hidden lg:inline-flex items-center px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-500 rounded">
+                ⌘K
+              </kbd>
+            </button>
             {isAuthenticated ? (
               <div className="relative">
                 <button
@@ -172,6 +200,20 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100">
           <div className="px-4 py-4 space-y-3">
+            {/* Mobile Search */}
+            <button
+              onClick={() => {
+                setIsMenuOpen(false);
+                setIsSearchOpen(true);
+              }}
+              className="flex items-center gap-2 w-full px-4 py-3 bg-gray-100 rounded-lg text-gray-600"
+            >
+              <Search className="w-5 h-5" />
+              <span>Search treatments or clinics...</span>
+            </button>
+            
+            <hr className="my-3" />
+            
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -221,6 +263,60 @@ const Navbar = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Search Modal */}
+      {isSearchOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+            onClick={() => setIsSearchOpen(false)}
+          />
+          
+          {/* Search Modal */}
+          <div className="fixed inset-x-4 top-20 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-2xl z-50">
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-500">Search</span>
+                <button
+                  onClick={() => setIsSearchOpen(false)}
+                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              
+              {/* Search Input */}
+              <div className="p-4">
+                <SearchAutocomplete 
+                  placeholder="Search treatments, clinics..." 
+                  onClose={() => setIsSearchOpen(false)}
+                />
+              </div>
+              
+              {/* Footer */}
+              <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-500">↑</kbd>
+                    <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-500">↓</kbd>
+                    to navigate
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-500">↵</kbd>
+                    to select
+                  </span>
+                </div>
+                <span className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-500">esc</kbd>
+                  to close
+                </span>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </nav>
   );

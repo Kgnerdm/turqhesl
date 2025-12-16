@@ -54,9 +54,14 @@ class RegisterView(APIView):
 
     def post(self, request):
         """Handle user registration."""
+        import sys
+        print(f"[DEBUG] Register request data: {request.data}", flush=True)
+        sys.stdout.flush()
         serializer = RegisterSerializer(data=request.data)
         
         if not serializer.is_valid():
+            print(f"[DEBUG] Validation errors: {serializer.errors}", flush=True)
+            sys.stdout.flush()
             return Response(
                 serializer.errors,
                 status=status.HTTP_400_BAD_REQUEST

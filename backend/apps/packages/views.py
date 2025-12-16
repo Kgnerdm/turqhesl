@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsProvider
+from apps.providers.models import Provider
 from .models import Package, Favorite
 from .serializers import (
     PackageCreateSerializer,
@@ -482,5 +483,84 @@ class FavoriteIdsView(APIView):
         return Response({
             'favorite_ids': favorite_ids,
             'count': len(favorite_ids)
+        })
+
+
+# ============================================
+# SEARCH VIEWS
+# ============================================
+
+class SearchSuggestionsView(APIView):
+    """
+    API endpoint for search autocomplete suggestions.
+    
+    GET /api/packages/search/suggestions/?q=query
+    
+    Returns matching packages and providers for the search query.
+    Used for autocomplete dropdown.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """Get search suggestions for autocomplete."""
+        query = request.query_params.get('q', '').strip()
+        
+        if len(query) < 2:
+            return Response({
+                'packages': [],
+                'providers': [],
+                'query': query
+            })
+        
+        # Search packages
+        packages = Package.objects.filter(
+            Q(name__icontains=query) | Q(description__icontains=query),
+            is_active=True,
+            provider__is_active=True
+        ).select_related('provider')[:5]
+        
+        package_results = [
+            {
+                'id': pkg.id,
+                'name': pkg.name,
+                'category': pkg.category,
+                'category_display': pkg.get_category_display(),
+                'price': str(pkg.price),
+                'currency': pkg.currency,
+                'provider_name': pkg.provider.business_name,
+                'provider_city': pkg.provider.city,
+                'provider_is_verified': pkg.provider.is_verified,
+                'image': pkg.images[0] if pkg.images else None,
+                'type': 'package'
+            }
+            for pkg in packages
+        ]
+        
+        # Search providers
+        providers = Provider.objects.filter(
+            Q(business_name__icontains=query) | Q(description__icontains=query),
+            is_active=True
+        )[:5]
+        
+        provider_results = [
+            {
+                'id': prov.id,
+                'name': prov.business_name,
+                'city': prov.city,
+                'categories': prov.categories,
+                'is_verified': prov.is_verified,
+                'package_count': prov.package_count,
+                'logo_url': prov.logo_url,
+                'type': 'provider'
+            }
+            for prov in providers
+        ]
+        
+        return Response({
+            'packages': package_results,
+            'providers': provider_results,
+            'query': query,
+            'total': len(package_results) + len(provider_results)
         })
 

@@ -93,6 +93,8 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
     phone: data.phone,
   };
   
+  console.log('[DEBUG] Register request:', backendRequest);
+  
   const response = await api.post<BackendAuthResponse>('/auth/register/', backendRequest);
   return transformAuthResponse(response.data);
 };

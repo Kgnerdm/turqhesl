@@ -17,6 +17,8 @@ from .views import (
     FavoriteToggleView,
     FavoriteCheckView,
     FavoriteIdsView,
+    # Search
+    SearchSuggestionsView,
 )
 
 app_name = 'packages'
@@ -32,6 +34,9 @@ urlpatterns = [
     # Favorites
     path('favorites/', FavoriteListView.as_view(), name='favorites'),
     path('favorites/ids/', FavoriteIdsView.as_view(), name='favorite-ids'),
+    
+    # Search
+    path('search/suggestions/', SearchSuggestionsView.as_view(), name='search-suggestions'),
     
     # Detail, Update, Delete
     path('<int:pk>/', PackageDetailView.as_view(), name='detail'),
