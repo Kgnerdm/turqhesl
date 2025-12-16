@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Package, 
   Calendar, 
@@ -9,18 +9,23 @@ import {
   ArrowRight,
   Plus,
   AlertCircle,
-  Building2
+  Building2,
+  Loader2,
+  Rocket
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, Card, Badge, CardSkeleton } from '@/components/ui';
 import { formatPrice, formatDate } from '@/utils/format';
 import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingListItem, type BookingStats } from '@/types';
 import { getProviderBookings, getBookingStats } from '@/api/bookings';
+import { getMyProvider } from '@/api/providers';
 
 const ProviderDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [stats, setStats] = useState<BookingStats>({
     total: 0,
     pending: 0,
@@ -38,6 +43,20 @@ const ProviderDashboard = () => {
       setError(null);
       
       try {
+        // First check if provider has a profile
+        try {
+          await getMyProvider();
+          setHasProfile(true);
+        } catch (err: any) {
+          if (err.response?.status === 404) {
+            // No provider profile - show onboarding
+            setHasProfile(false);
+            setIsLoading(false);
+            return;
+          }
+          throw err;
+        }
+        
         // Load stats and recent bookings in parallel
         const [statsResponse, bookingsResponse] = await Promise.all([
           getBookingStats(),
@@ -83,6 +102,90 @@ const ProviderDashboard = () => {
       color: 'bg-purple-500',
     },
   ];
+
+  // Loading state
+  if (isLoading && hasProfile === null) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-primary-500 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Provider Onboarding - No profile yet
+  if (hasProfile === false) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Card className="text-center py-12">
+            <div className="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Rocket className="w-10 h-10 text-primary-500" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">
+              Welcome to TurqHeal! 🎉
+            </h1>
+            <p className="text-gray-600 mb-2">
+              You're almost ready to start receiving bookings.
+            </p>
+            <p className="text-gray-500 mb-8">
+              First, let's set up your provider profile so patients can find you.
+            </p>
+            
+            <div className="space-y-4">
+              <Button 
+                size="lg" 
+                onClick={() => navigate('/dashboard/provider/profile')}
+                leftIcon={<Building2 className="w-5 h-5" />}
+              >
+                Create Provider Profile
+              </Button>
+              
+              <div className="text-sm text-gray-500">
+                This will only take a few minutes
+              </div>
+            </div>
+
+            {/* Steps Preview */}
+            <div className="mt-10 pt-8 border-t border-gray-100">
+              <h3 className="text-sm font-medium text-gray-700 mb-4">What you'll need:</h3>
+              <div className="grid md:grid-cols-3 gap-4 text-left">
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-primary-600 font-semibold text-sm">1</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">Business Info</p>
+                    <p className="text-xs text-gray-500">Name, description, city</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-primary-600 font-semibold text-sm">2</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">Contact Details</p>
+                    <p className="text-xs text-gray-500">Phone, email, website</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-primary-600 font-semibold text-sm">3</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">Categories</p>
+                    <p className="text-xs text-gray-500">Services you offer</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
