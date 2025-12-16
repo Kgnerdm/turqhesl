@@ -5,7 +5,7 @@ Serializers for the packages app.
 from rest_framework import serializers
 
 from apps.providers.serializers import ProviderListSerializer
-from .models import Package, PackageCategory
+from .models import Package, PackageCategory, Favorite
 
 
 class PackageListSerializer(serializers.ModelSerializer):
@@ -164,5 +164,78 @@ class PackageUpdateSerializer(serializers.ModelSerializer):
         """Ensure images is a list."""
         if value is not None and not isinstance(value, list):
             raise serializers.ValidationError('Images must be a list.')
+        return value
+
+
+# ============================================
+# FAVORITE SERIALIZERS
+# ============================================
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    """
+    Serializer for favorite list view.
+    
+    Returns the favorited package with basic info.
+    """
+    
+    package = PackageListSerializer(read_only=True)
+    
+    class Meta:
+        model = Favorite
+        fields = [
+            'id',
+            'package',
+            'created_at',
+        ]
+
+
+class FavoriteCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for adding a package to favorites.
+    """
+    
+    class Meta:
+        model = Favorite
+        fields = ['package']
+    
+    def validate_package(self, value):
+        """Ensure package exists and is active."""
+        if not value.is_active:
+            raise serializers.ValidationError('Cannot favorite an inactive package.')
+        return value
+    
+    def validate(self, attrs):
+        """Check if already favorited."""
+        user = self.context['request'].user
+        package = attrs.get('package')
+        
+        if Favorite.objects.filter(user=user, package=package).exists():
+            raise serializers.ValidationError(
+                {'detail': 'Package is already in your favorites.'}
+            )
+        
+        return attrs
+    
+    def create(self, validated_data):
+        """Create favorite with the current user."""
+        user = self.context['request'].user
+        return Favorite.objects.create(user=user, **validated_data)
+
+
+class FavoriteToggleSerializer(serializers.Serializer):
+    """
+    Serializer for toggling favorite status.
+    
+    Returns whether the package is now favorited or not.
+    """
+    
+    package_id = serializers.IntegerField()
+    
+    def validate_package_id(self, value):
+        """Ensure package exists."""
+        try:
+            package = Package.objects.get(pk=value, is_active=True)
+        except Package.DoesNotExist:
+            raise serializers.ValidationError('Package not found or inactive.')
         return value
 

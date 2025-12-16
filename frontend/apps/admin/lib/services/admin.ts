@@ -257,3 +257,4 @@ export async function updateBookingStatus(id: number, status: string): Promise<B
   return transformBooking(response.data);
 }
 
+

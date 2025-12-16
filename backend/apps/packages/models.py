@@ -4,6 +4,7 @@ Package models for TurqHeal.
 Medical treatment packages offered by healthcare providers.
 """
 
+from django.conf import settings
 from django.db import models
 
 
@@ -97,4 +98,39 @@ class Package(models.Model):
     def price_formatted(self):
         """Return formatted price with currency."""
         return f"${self.price:,.0f}" if self.currency == 'USD' else f"{self.price:,.0f} {self.currency}"
+
+
+class Favorite(models.Model):
+    """
+    Favorite model for patient wishlists.
+    
+    Allows patients to save packages they're interested in.
+    """
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='favorites',
+        help_text='The patient who favorited the package'
+    )
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.CASCADE,
+        related_name='favorited_by',
+        help_text='The favorited package'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'favorite'
+        verbose_name_plural = 'favorites'
+        ordering = ['-created_at']
+        # Ensure a user can only favorite a package once
+        unique_together = ['user', 'package']
+        indexes = [
+            models.Index(fields=['user', 'package']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.package.name}"
 

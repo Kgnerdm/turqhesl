@@ -40,3 +40,4 @@ export async function logout(refreshToken: string): Promise<void> {
   await api.post('/auth/logout/', { refresh: refreshToken });
 }
 
+
