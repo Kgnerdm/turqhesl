@@ -347,3 +347,43 @@ export const rejectProvider = async (id: string, reason?: string): Promise<{ det
   });
   return response.data;
 };
+
+
+// ============================================
+// PLATFORM STATS
+// ============================================
+
+/**
+ * Platform statistics response
+ */
+export interface PlatformStats {
+  verifiedProviders: number;
+  totalProviders: number;
+  totalPackages: number;
+  totalTreatments: number;
+  patientsServed: number;
+  completedBookings: number;
+}
+
+/**
+ * Get public platform statistics for homepage
+ */
+export const getPlatformStats = async (): Promise<PlatformStats> => {
+  const response = await api.get<{
+    verified_providers: number;
+    total_providers: number;
+    total_packages: number;
+    total_treatments: number;
+    patients_served: number;
+    completed_bookings: number;
+  }>('/providers/stats/public/');
+  
+  return {
+    verifiedProviders: response.data.verified_providers,
+    totalProviders: response.data.total_providers,
+    totalPackages: response.data.total_packages,
+    totalTreatments: response.data.total_treatments,
+    patientsServed: response.data.patients_served,
+    completedBookings: response.data.completed_bookings,
+  };
+};

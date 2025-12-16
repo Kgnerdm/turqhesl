@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Button, Select } from '@/components/ui';
 import { PACKAGE_CATEGORIES, TURKISH_CITIES, type Provider } from '@/types';
-import { getProviders } from '@/api/providers';
+import { getProviders, getPlatformStats, type PlatformStats } from '@/api/providers';
 
 // Featured provider type for display
 interface FeaturedProvider {
@@ -36,6 +36,7 @@ const HomePage = () => {
   const [selectedCity, setSelectedCity] = useState('');
   const [featuredProviders, setFeaturedProviders] = useState<FeaturedProvider[]>([]);
   const [isLoadingProviders, setIsLoadingProviders] = useState(true);
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
 
   // Treatment options for search
   const treatmentOptions = [
@@ -49,7 +50,7 @@ const HomePage = () => {
     ...TURKISH_CITIES.map((city) => ({ value: city, label: city })),
   ];
 
-  // Load featured providers from API
+  // Load featured providers and platform stats from API
   useEffect(() => {
     const loadFeaturedProviders = async () => {
       setIsLoadingProviders(true);
@@ -87,7 +88,17 @@ const HomePage = () => {
       }
     };
 
+    const loadPlatformStats = async () => {
+      try {
+        const stats = await getPlatformStats();
+        setPlatformStats(stats);
+      } catch (error) {
+        console.error('Failed to load platform stats:', error);
+      }
+    };
+
     loadFeaturedProviders();
+    loadPlatformStats();
   }, []);
 
   // Handle search
@@ -98,11 +109,31 @@ const HomePage = () => {
     navigate(`/packages?${params.toString()}`);
   };
 
-  // Trust badges data
+  // Format number for display (e.g., 1000 -> 1K+)
+  const formatStatNumber = (num: number): string => {
+    if (num >= 1000) {
+      return `${Math.floor(num / 1000)}K+`;
+    }
+    return `${num}+`;
+  };
+
+  // Trust badges data - use real stats or fallback
   const trustBadges = [
-    { icon: Building2, value: '500+', label: 'Verified Providers' },
-    { icon: Users, value: '50K+', label: 'Happy Patients' },
-    { icon: Stethoscope, value: '200+', label: 'Treatments' },
+    { 
+      icon: Building2, 
+      value: platformStats ? formatStatNumber(platformStats.verifiedProviders) : '...', 
+      label: 'Verified Providers' 
+    },
+    { 
+      icon: Users, 
+      value: platformStats ? formatStatNumber(platformStats.patientsServed || platformStats.completedBookings) : '...', 
+      label: 'Happy Patients' 
+    },
+    { 
+      icon: Stethoscope, 
+      value: platformStats ? formatStatNumber(platformStats.totalPackages) : '...', 
+      label: 'Treatments' 
+    },
   ];
 
   return (

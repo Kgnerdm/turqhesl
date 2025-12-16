@@ -9,6 +9,7 @@ from .views import (
     AdminRejectProviderView,
     AdminStatsView,
     MyProviderView,
+    PlatformStatsView,
     ProviderCreateView,
     ProviderDetailView,
     ProviderListView,
@@ -25,6 +26,9 @@ urlpatterns = [
     
     # Current user's provider profile
     path('me/', MyProviderView.as_view(), name='me'),
+    
+    # Public stats (no auth required)
+    path('stats/public/', PlatformStatsView.as_view(), name='public-stats'),
     
     # Admin endpoints (must be before <int:pk>/ to avoid conflicts)
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),

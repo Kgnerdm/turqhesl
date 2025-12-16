@@ -421,3 +421,62 @@ class AdminRejectProviderView(APIView):
             'reason': rejection_reason
         })
 
+
+# ============================================
+# PUBLIC STATS
+# ============================================
+
+class PlatformStatsView(APIView):
+    """
+    API endpoint for public platform statistics.
+    
+    GET /api/providers/stats/public/
+    
+    Returns platform-wide statistics for the homepage.
+    No authentication required.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """Get public platform statistics."""
+        # Count verified providers
+        verified_providers = Provider.objects.filter(
+            is_active=True,
+            is_verified=True
+        ).count()
+        
+        # Count all active providers
+        total_providers = Provider.objects.filter(is_active=True).count()
+        
+        # Count active packages (treatments)
+        total_packages = Package.objects.filter(
+            is_active=True,
+            provider__is_active=True
+        ).count()
+        
+        # Count unique patients (users with patient role who have bookings)
+        patients_with_bookings = User.objects.filter(
+            role='patient',
+            bookings__isnull=False
+        ).distinct().count()
+        
+        # Count total completed bookings as a proxy for "happy patients"
+        completed_bookings = Booking.objects.filter(
+            status='completed'
+        ).count()
+        
+        # Count unique categories from packages
+        unique_categories = Package.objects.filter(
+            is_active=True
+        ).values('category').distinct().count()
+        
+        return Response({
+            'verified_providers': verified_providers,
+            'total_providers': total_providers,
+            'total_packages': total_packages,
+            'total_treatments': unique_categories,
+            'patients_served': patients_with_bookings,
+            'completed_bookings': completed_bookings,
+        })
+
