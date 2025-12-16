@@ -16,7 +16,9 @@ import {
   Package,
   Building2,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Heart,
+  ArrowRight
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, Card, Badge, Modal } from '@/components/ui';
@@ -306,6 +308,39 @@ const PatientDashboard = () => {
             icon={Package}
             color="bg-purple-100 text-purple-600"
           />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid md:grid-cols-2 gap-4 mb-8">
+          <Link to="/packages">
+            <Card hover className="h-full">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
+                  <Package className="w-6 h-6 text-primary-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">Browse Packages</h3>
+                  <p className="text-sm text-gray-500">Find your next treatment</p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </Card>
+          </Link>
+          
+          <Link to="/dashboard/patient/favorites">
+            <Card hover className="h-full">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                  <Heart className="w-6 h-6 text-red-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">My Favorites</h3>
+                  <p className="text-sm text-gray-500">View saved packages</p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </Card>
+          </Link>
         </div>
 
         {/* Profile Card */}

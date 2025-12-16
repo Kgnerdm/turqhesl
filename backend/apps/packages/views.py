@@ -11,12 +11,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.users.permissions import IsProvider
-from .models import Package
+from .models import Package, Favorite
 from .serializers import (
     PackageCreateSerializer,
     PackageDetailSerializer,
     PackageListSerializer,
     PackageUpdateSerializer,
+    FavoriteSerializer,
+    FavoriteCreateSerializer,
 )
 
 
@@ -342,4 +344,143 @@ class ProviderPackagesView(APIView):
         
         serializer = PackageListSerializer(packages, many=True)
         return Response({'data': serializer.data})
+
+
+# ============================================
+# FAVORITE VIEWS
+# ============================================
+
+class FavoriteListView(APIView):
+    """
+    API endpoint for listing user's favorite packages.
+    
+    GET /api/packages/favorites/
+    
+    Returns all packages the user has favorited.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get current user's favorited packages."""
+        favorites = Favorite.objects.filter(
+            user=request.user
+        ).select_related(
+            'package',
+            'package__provider'
+        ).order_by('-created_at')
+        
+        # Pagination
+        page = int(request.query_params.get('page', 1))
+        limit = int(request.query_params.get('limit', 20))
+        offset = (page - 1) * limit
+        
+        total = favorites.count()
+        favorites_page = favorites[offset:offset + limit]
+        
+        serializer = FavoriteSerializer(favorites_page, many=True)
+        
+        return Response({
+            'data': serializer.data,
+            'pagination': {
+                'page': page,
+                'limit': limit,
+                'total': total,
+                'total_pages': (total + limit - 1) // limit if total > 0 else 0,
+                'has_next': offset + limit < total,
+                'has_prev': page > 1,
+            }
+        })
+
+
+class FavoriteToggleView(APIView):
+    """
+    API endpoint for toggling favorite status.
+    
+    POST /api/packages/:id/favorite/
+    
+    If package is favorited, removes it. If not, adds it.
+    Returns the new favorite status.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        """Toggle favorite status for a package."""
+        try:
+            package = Package.objects.get(pk=pk, is_active=True)
+        except Package.DoesNotExist:
+            return Response(
+                {'detail': 'Package not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if already favorited
+        favorite = Favorite.objects.filter(
+            user=request.user,
+            package=package
+        ).first()
+        
+        if favorite:
+            # Remove from favorites
+            favorite.delete()
+            return Response({
+                'is_favorited': False,
+                'message': 'Package removed from favorites.'
+            })
+        else:
+            # Add to favorites
+            Favorite.objects.create(user=request.user, package=package)
+            return Response({
+                'is_favorited': True,
+                'message': 'Package added to favorites.'
+            }, status=status.HTTP_201_CREATED)
+
+
+class FavoriteCheckView(APIView):
+    """
+    API endpoint for checking if a package is favorited.
+    
+    GET /api/packages/:id/favorite/
+    
+    Returns whether the package is in user's favorites.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        """Check if package is favorited by current user."""
+        is_favorited = Favorite.objects.filter(
+            user=request.user,
+            package_id=pk
+        ).exists()
+        
+        return Response({
+            'is_favorited': is_favorited
+        })
+
+
+class FavoriteIdsView(APIView):
+    """
+    API endpoint for getting all favorited package IDs.
+    
+    GET /api/packages/favorites/ids/
+    
+    Returns a list of package IDs that the user has favorited.
+    Useful for checking multiple packages at once.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Get list of favorited package IDs."""
+        favorite_ids = list(
+            Favorite.objects.filter(user=request.user)
+            .values_list('package_id', flat=True)
+        )
+        
+        return Response({
+            'favorite_ids': favorite_ids,
+            'count': len(favorite_ids)
+        })
 

@@ -14,10 +14,13 @@ import {
   Check,
   Clock,
   ArrowRight,
-  Package as PackageIcon
+  Package as PackageIcon,
+  Heart,
+  Loader2
 } from 'lucide-react';
 import { PACKAGE_CATEGORIES, TURKISH_CITIES, type Package } from '@/types';
-import { getPackages, type PackagesResponse } from '@/api/packages';
+import { getPackages, getFavoriteIds, toggleFavorite, type PackagesResponse } from '@/api/packages';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Category color mapping
 const categoryColors: Record<string, { bg: string; text: string }> = {
@@ -61,15 +64,50 @@ const PackageCardSkeleton = () => (
 // Package Card Component
 interface PackageCardProps {
   package_: Package;
+  isFavorited?: boolean;
+  onToggleFavorite?: (packageId: string) => Promise<void>;
+  isAuthenticated?: boolean;
 }
 
-const PackageCard = ({ package_ }: PackageCardProps) => {
+const PackageCard = ({ package_, isFavorited = false, onToggleFavorite, isAuthenticated = false }: PackageCardProps) => {
   const navigate = useNavigate();
+  const [isToggling, setIsToggling] = useState(false);
+  const [localFavorited, setLocalFavorited] = useState(isFavorited);
+  
+  // Sync with prop changes
+  useEffect(() => {
+    setLocalFavorited(isFavorited);
+  }, [isFavorited]);
+  
   const categoryColor = categoryColors[package_.category] || { bg: 'bg-gray-50', text: 'text-gray-700' };
   const categoryLabel = PACKAGE_CATEGORIES[package_.category as keyof typeof PACKAGE_CATEGORIES] || package_.category;
   
   const displayedIncludes = package_.includes.slice(0, 3);
   const remainingCount = package_.includes.length - 3;
+
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      navigate('/auth/login');
+      return;
+    }
+    
+    if (!onToggleFavorite || isToggling) return;
+    
+    setIsToggling(true);
+    setLocalFavorited(!localFavorited);
+    
+    try {
+      await onToggleFavorite(package_.id);
+    } catch (error) {
+      setLocalFavorited(localFavorited);
+      console.error('Failed to toggle favorite:', error);
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   return (
     <div 
@@ -91,9 +129,33 @@ const PackageCard = ({ package_ }: PackageCardProps) => {
           <span className="text-sm font-semibold">{categoryLabel}</span>
         </div>
         
-        {/* Verified Badge - Top Right */}
+        {/* Favorite Button - Top Right */}
+        <button
+          onClick={handleFavoriteClick}
+          disabled={isToggling}
+          className={`
+            absolute top-4 right-4 
+            w-10 h-10 rounded-full 
+            flex items-center justify-center
+            transition-all duration-200 z-10
+            ${localFavorited 
+              ? 'bg-red-500 text-white shadow-lg' 
+              : 'bg-white/90 text-gray-600 hover:bg-white hover:text-red-500 shadow-md'
+            }
+            ${isToggling ? 'opacity-70' : 'hover:scale-110'}
+          `}
+          aria-label={localFavorited ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          {isToggling ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Heart className={`w-5 h-5 ${localFavorited ? 'fill-current' : ''}`} />
+          )}
+        </button>
+        
+        {/* Verified Badge - Below favorite */}
         {package_.provider?.isVerified && (
-          <div className="absolute top-4 right-4 bg-success/90 backdrop-blur-md border border-white rounded-full px-3 py-1.5 shadow-lg flex items-center gap-1.5">
+          <div className="absolute top-16 right-4 bg-success/90 backdrop-blur-md border border-white rounded-full px-3 py-1.5 shadow-lg flex items-center gap-1.5">
             <CheckCircle className="w-4 h-4 text-white" />
             <span className="text-sm font-medium text-white">Verified</span>
           </div>
@@ -180,12 +242,16 @@ const EmptyState = ({ onClearFilters }: { onClearFilters: () => void }) => (
 );
 
 const PackagesPage = () => {
+  const { user, isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [packages, setPackages] = useState<Package[]>([]);
   const [pagination, setPagination] = useState<PackagesResponse['pagination'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Favorites state
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
 
   // Filter states
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -194,6 +260,41 @@ const PackagesPage = () => {
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || '');
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
+  
+  // Load favorite IDs for authenticated users
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (!isAuthenticated) {
+        setFavoriteIds(new Set());
+        return;
+      }
+      
+      try {
+        const ids = await getFavoriteIds();
+        setFavoriteIds(new Set(ids));
+      } catch (error) {
+        console.error('Failed to load favorites:', error);
+      }
+    };
+    
+    loadFavorites();
+  }, [isAuthenticated]);
+  
+  // Handle favorite toggle
+  const handleToggleFavorite = useCallback(async (packageId: string) => {
+    const result = await toggleFavorite(packageId);
+    
+    setFavoriteIds(prev => {
+      const newSet = new Set(prev);
+      const numId = parseInt(packageId);
+      if (result.isFavorited) {
+        newSet.add(numId);
+      } else {
+        newSet.delete(numId);
+      }
+      return newSet;
+    });
+  }, []);
 
   // Category options
   const categoryOptions = [
@@ -646,7 +747,13 @@ const PackagesPage = () => {
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {packages.map((pkg) => (
-                  <PackageCard key={pkg.id} package_={pkg} />
+                  <PackageCard 
+                    key={pkg.id} 
+                    package_={pkg}
+                    isFavorited={favoriteIds.has(parseInt(pkg.id))}
+                    onToggleFavorite={handleToggleFavorite}
+                    isAuthenticated={isAuthenticated}
+                  />
                 ))}
               </div>
             )}

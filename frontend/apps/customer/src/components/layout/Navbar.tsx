@@ -115,6 +115,16 @@ const Navbar = () => {
                         <LayoutDashboard className="w-4 h-4" />
                         Dashboard
                       </Link>
+                      {user?.role === 'patient' && (
+                        <Link
+                          to="/dashboard/patient/favorites"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <Heart className="w-4 h-4 text-red-500" />
+                          My Favorites
+                        </Link>
+                      )}
                       <Link
                         to={getProfileLink()}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"

@@ -1,5 +1,6 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MapPin, Clock, Check } from 'lucide-react';
+import { Star, MapPin, Clock, Check, Heart, Loader2 } from 'lucide-react';
 import { Card, Badge } from '@/components/ui';
 import { formatPrice } from '@/utils/format';
 import { PACKAGE_CATEGORIES } from '@/types';
@@ -7,9 +8,25 @@ import type { Package } from '@/types';
 
 interface PackageCardProps {
   package_: Package;
+  isFavorited?: boolean;
+  onToggleFavorite?: (packageId: string) => Promise<void>;
+  showFavoriteButton?: boolean;
 }
 
-const PackageCard = ({ package_ }: PackageCardProps) => {
+const PackageCard = ({ 
+  package_, 
+  isFavorited = false, 
+  onToggleFavorite,
+  showFavoriteButton = true 
+}: PackageCardProps) => {
+  const [isToggling, setIsToggling] = React.useState(false);
+  const [localFavorited, setLocalFavorited] = React.useState(isFavorited);
+
+  // Sync with prop changes
+  React.useEffect(() => {
+    setLocalFavorited(isFavorited);
+  }, [isFavorited]);
+
   const {
     id,
     name,
@@ -27,6 +44,27 @@ const PackageCard = ({ package_ }: PackageCardProps) => {
 
   const imageUrl = images?.[0] || 'https://images.unsplash.com/photo-1551076805-e1869033e561?w=400';
 
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!onToggleFavorite || isToggling) return;
+    
+    setIsToggling(true);
+    // Optimistic update
+    setLocalFavorited(!localFavorited);
+    
+    try {
+      await onToggleFavorite(id);
+    } catch (error) {
+      // Revert on error
+      setLocalFavorited(localFavorited);
+      console.error('Failed to toggle favorite:', error);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   return (
     <Link to={`/packages/${id}`}>
       <Card hover padding="none" className="h-full overflow-hidden">
@@ -42,6 +80,34 @@ const PackageCard = ({ package_ }: PackageCardProps) => {
               {PACKAGE_CATEGORIES[category]}
             </Badge>
           </div>
+          
+          {/* Favorite Button */}
+          {showFavoriteButton && onToggleFavorite && (
+            <button
+              onClick={handleFavoriteClick}
+              disabled={isToggling}
+              className={`
+                absolute top-3 right-3 
+                w-9 h-9 rounded-full 
+                flex items-center justify-center
+                transition-all duration-200
+                ${localFavorited 
+                  ? 'bg-red-500 text-white shadow-lg' 
+                  : 'bg-white/90 text-gray-600 hover:bg-white hover:text-red-500 shadow-md'
+                }
+                ${isToggling ? 'opacity-70' : 'hover:scale-110'}
+              `}
+              aria-label={localFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {isToggling ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Heart 
+                  className={`w-5 h-5 ${localFavorited ? 'fill-current' : ''}`} 
+                />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Content */}

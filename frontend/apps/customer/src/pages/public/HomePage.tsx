@@ -54,7 +54,8 @@ const HomePage = () => {
     const loadFeaturedProviders = async () => {
       setIsLoadingProviders(true);
       try {
-        const response = await getProviders({ isVerified: true, limit: 4 });
+        // Load all providers (both verified and unverified)
+        const response = await getProviders({ limit: 8 });
         
         const providers: FeaturedProvider[] = response.data.map((p: Provider) => ({
           id: p.id,
@@ -67,7 +68,16 @@ const HomePage = () => {
           image: p.coverImageUrl || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800',
         }));
         
-        setFeaturedProviders(providers);
+        // Sort: verified providers first, then by packageCount
+        const sortedProviders = providers.sort((a, b) => {
+          if (a.isVerified !== b.isVerified) {
+            return b.isVerified ? 1 : -1;
+          }
+          return b.packageCount - a.packageCount;
+        });
+        
+        // Take first 4 after sorting
+        setFeaturedProviders(sortedProviders.slice(0, 4));
       } catch (error) {
         console.error('Failed to load featured providers:', error);
         // Fallback to empty array - could show static data here

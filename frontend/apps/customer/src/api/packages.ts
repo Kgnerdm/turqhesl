@@ -281,20 +281,127 @@ export const togglePackageStatus = async (id: string): Promise<Package> => {
 
 /**
  * Get featured packages (for homepage)
+ * Returns all packages, not filtered by verification status
  */
 export const getFeaturedPackages = async (limit = 6): Promise<Package[]> => {
   const response = await api.get<BackendPaginatedResponse>('/packages/', {
-    params: { limit, is_verified: true },
+    params: { limit },
   });
   return response.data.data.map(transformPackage);
 };
 
 /**
  * Get featured providers (for homepage)
+ * Returns all packages, not filtered by verification status
  */
 export const getFeaturedProviders = async (limit = 4): Promise<Package[]> => {
   const response = await api.get<BackendPaginatedResponse>('/packages/', {
-    params: { limit, is_verified: true },
+    params: { limit },
   });
   return response.data.data.map(transformPackage);
+};
+
+
+// ============================================
+// FAVORITES API
+// ============================================
+
+/**
+ * Backend favorite item response
+ */
+interface BackendFavorite {
+  id: number;
+  package: BackendPackage;
+  created_at: string;
+}
+
+/**
+ * Backend favorites list response
+ */
+interface BackendFavoritesResponse {
+  data: BackendFavorite[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
+/**
+ * Frontend favorite item type
+ */
+export interface FavoriteItem {
+  id: string;
+  package: Package;
+  createdAt: string;
+}
+
+/**
+ * Favorites response type
+ */
+export interface FavoritesResponse {
+  data: FavoriteItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+/**
+ * Get user's favorite packages
+ */
+export const getFavorites = async (page = 1, limit = 20): Promise<FavoritesResponse> => {
+  const response = await api.get<BackendFavoritesResponse>('/packages/favorites/', {
+    params: { page, limit },
+  });
+  
+  return {
+    data: response.data.data.map((item) => ({
+      id: String(item.id),
+      package: transformPackage(item.package),
+      createdAt: item.created_at,
+    })),
+    pagination: {
+      page: response.data.pagination.page,
+      limit: response.data.pagination.limit,
+      total: response.data.pagination.total,
+      totalPages: response.data.pagination.total_pages,
+      hasNext: response.data.pagination.has_next,
+      hasPrev: response.data.pagination.has_prev,
+    },
+  };
+};
+
+/**
+ * Get list of favorited package IDs
+ */
+export const getFavoriteIds = async (): Promise<number[]> => {
+  const response = await api.get<{ favorite_ids: number[]; count: number }>('/packages/favorites/ids/');
+  return response.data.favorite_ids;
+};
+
+/**
+ * Toggle favorite status for a package
+ */
+export const toggleFavorite = async (packageId: string): Promise<{ isFavorited: boolean; message: string }> => {
+  const response = await api.post<{ is_favorited: boolean; message: string }>(`/packages/${packageId}/favorite/`);
+  return {
+    isFavorited: response.data.is_favorited,
+    message: response.data.message,
+  };
+};
+
+/**
+ * Check if a package is favorited
+ */
+export const checkFavorite = async (packageId: string): Promise<boolean> => {
+  const response = await api.get<{ is_favorited: boolean }>(`/packages/${packageId}/favorite/`);
+  return response.data.is_favorited;
 };
