@@ -9,11 +9,13 @@ import {
   Loader2,
   RefreshCw,
   X,
-  Save
+  Save,
+  Clock,
+  ShieldAlert
 } from 'lucide-react';
 import { Button, Card, Badge, Modal, Input, Select, CardSkeleton } from '@/components/ui';
 import { formatPrice } from '@/utils/format';
-import { PACKAGE_CATEGORIES, type Package, type PackageCategory } from '@/types';
+import { PACKAGE_CATEGORIES, type Package, type PackageCategory, type Provider } from '@/types';
 import { 
   getMyPackages, 
   createPackage, 
@@ -21,6 +23,7 @@ import {
   deletePackage, 
   togglePackageStatus 
 } from '@/api/packages';
+import { getMyProvider } from '@/api/providers';
 
 interface PackageFormData {
   name: string;
@@ -56,6 +59,7 @@ const PackageManagement = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isToggling, setIsToggling] = useState<string | null>(null);
+  const [providerProfile, setProviderProfile] = useState<Provider | null>(null);
 
   const categoryOptions = Object.entries(PACKAGE_CATEGORIES).map(([value, label]) => ({
     value,
@@ -69,14 +73,18 @@ const PackageManagement = () => {
     { value: 'TRY', label: 'TRY' },
   ];
 
-  // Load packages
+  // Load packages and provider profile
   const loadPackages = async () => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const data = await getMyPackages();
-      setPackages(data);
+      const [packagesData, providerData] = await Promise.all([
+        getMyPackages(),
+        getMyProvider()
+      ]);
+      setPackages(packagesData);
+      setProviderProfile(providerData);
     } catch (err: any) {
       console.error('Failed to load packages:', err);
       setError(err.response?.data?.detail || 'Failed to load packages');
@@ -198,9 +206,25 @@ const PackageManagement = () => {
     );
   }
 
+  const isVerified = providerProfile?.isVerified ?? false;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Verification Pending Banner */}
+        {providerProfile && !isVerified && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+            <Clock className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-800">Verification Pending</h3>
+              <p className="text-amber-700 text-sm mt-1">
+                Your provider profile is awaiting admin verification. You cannot create packages until your account is verified.
+                This usually takes 1-2 business days.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
@@ -221,12 +245,22 @@ const PackageManagement = () => {
             >
               Refresh
             </Button>
-            <Button 
-              leftIcon={<Plus className="w-4 h-4" />}
-              onClick={() => handleOpenModal()}
-            >
-              Add Package
-            </Button>
+            {isVerified ? (
+              <Button 
+                leftIcon={<Plus className="w-4 h-4" />}
+                onClick={() => handleOpenModal()}
+              >
+                Add Package
+              </Button>
+            ) : (
+              <Button 
+                leftIcon={<ShieldAlert className="w-4 h-4" />}
+                disabled
+                title="Only verified providers can create packages"
+              >
+                Add Package
+              </Button>
+            )}
           </div>
         </div>
 
@@ -371,11 +405,26 @@ const PackageManagement = () => {
 
             {packages.length === 0 && (
               <Card className="text-center py-12">
-                <Plus className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-4">No packages created yet</p>
-                <Button onClick={() => handleOpenModal()}>
-                  Create Your First Package
-                </Button>
+                {isVerified ? (
+                  <>
+                    <Plus className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 mb-4">No packages created yet</p>
+                    <Button onClick={() => handleOpenModal()}>
+                      Create Your First Package
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+                    <p className="text-gray-700 font-medium mb-2">Verification Required</p>
+                    <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                      Only verified providers can create packages. Your account is currently pending verification.
+                    </p>
+                    <Button disabled>
+                      Create Your First Package
+                    </Button>
+                  </>
+                )}
               </Card>
             )}
           </div>

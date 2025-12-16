@@ -11,12 +11,14 @@ import {
   AlertCircle,
   Building2,
   Loader2,
-  Rocket
+  Rocket,
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, Card, Badge, CardSkeleton } from '@/components/ui';
 import { formatPrice, formatDate } from '@/utils/format';
-import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingListItem, type BookingStats } from '@/types';
+import { BOOKING_STATUS_LABELS, BOOKING_STATUS_COLORS, type BookingListItem, type BookingStats, type Provider } from '@/types';
 import { getProviderBookings, getBookingStats } from '@/api/bookings';
 import { getMyProvider } from '@/api/providers';
 
@@ -26,6 +28,7 @@ const ProviderDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [providerProfile, setProviderProfile] = useState<Provider | null>(null);
   const [stats, setStats] = useState<BookingStats>({
     total: 0,
     pending: 0,
@@ -45,8 +48,9 @@ const ProviderDashboard = () => {
       try {
         // First check if provider has a profile
         try {
-          await getMyProvider();
+          const provider = await getMyProvider();
           setHasProfile(true);
+          setProviderProfile(provider);
         } catch (err: any) {
           if (err.response?.status === 404) {
             // No provider profile - show onboarding
@@ -207,6 +211,33 @@ const ProviderDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Verification Pending Banner */}
+        {providerProfile && !providerProfile.isVerified && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+            <Clock className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-800">Verification Pending</h3>
+              <p className="text-amber-700 text-sm mt-1">
+                Your provider profile is awaiting admin verification. You will not be able to create packages until your account is verified.
+                This usually takes 1-2 business days.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Verified Badge */}
+        {providerProfile?.isVerified && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+            <ShieldCheck className="w-6 h-6 text-green-500 flex-shrink-0" />
+            <div>
+              <span className="font-semibold text-green-800">Verified Provider</span>
+              <span className="text-green-700 text-sm ml-2">
+                Your account is verified. You can create and manage packages.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
@@ -217,11 +248,21 @@ const ProviderDashboard = () => {
               Welcome back, {user?.firstName}! Here&apos;s your overview.
             </p>
           </div>
-          <Link to="/dashboard/provider/packages">
-            <Button leftIcon={<Plus className="w-4 h-4" />}>
+          {providerProfile?.isVerified ? (
+            <Link to="/dashboard/provider/packages">
+              <Button leftIcon={<Plus className="w-4 h-4" />}>
+                Add Package
+              </Button>
+            </Link>
+          ) : (
+            <Button 
+              leftIcon={<Plus className="w-4 h-4" />}
+              disabled
+              title="Only verified providers can create packages"
+            >
               Add Package
             </Button>
-          </Link>
+          )}
         </div>
 
         {/* Stats Grid */}

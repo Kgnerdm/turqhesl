@@ -149,13 +149,27 @@ class PackageCreateView(APIView):
     
     POST /api/packages/
     
-    Only providers can create packages.
+    Only VERIFIED providers can create packages.
     """
 
     permission_classes = [IsAuthenticated, IsProvider]
 
     def post(self, request):
         """Create a new package."""
+        # Check if provider is verified
+        if not hasattr(request.user, 'provider_profile'):
+            return Response(
+                {'detail': 'Provider profile not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        provider = request.user.provider_profile
+        if not provider.is_verified:
+            return Response(
+                {'detail': 'Only verified providers can create packages. Please wait for admin verification.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
         serializer = PackageCreateSerializer(
             data=request.data,
             context={'request': request}
