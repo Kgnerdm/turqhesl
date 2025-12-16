@@ -313,8 +313,8 @@ Backend'de `CORS_ALLOWED_ORIGINS` listesine frontend URL'ini ekle.
 
 ### Yapılacaklar (TODO)
 - [ ] Firebase Storage entegrasyonu (License PDF + Logo upload)
-- [ ] Admin Dashboard backend entegrasyonu
-- [ ] Provider verification flow
+- [x] Admin Dashboard backend entegrasyonu ✅
+- [x] Provider verification flow ✅
 - [ ] Email notifications
 - [ ] Payment integration
 - [ ] Reviews & Ratings (MVP dışı)
@@ -328,6 +328,42 @@ Backend'de `CORS_ALLOWED_ORIGINS` listesine frontend URL'ini ekle.
 
 ---
 
+## 🔐 Admin Dashboard
+
+Admin Dashboard ayrı bir Next.js uygulaması olarak çalışır.
+
+### Admin Kurulumu
+
+```bash
+cd frontend/apps/admin
+npm install
+npm run dev
+```
+
+**Admin URL:** `http://localhost:3000`
+
+### Admin Özellikleri
+- ✅ Platform istatistikleri (kullanıcılar, provider'lar, bookings, gelir)
+- ✅ Provider yönetimi (onaylama, reddetme, verification)
+- ✅ User yönetimi (listeleme, aktif/pasif, silme)
+- ✅ Booking yönetimi (listeleme, filtreleme, detay görüntüleme)
+- ✅ Package yönetimi (listeleme, filtreleme)
+
+### Admin API Endpoints
+| Method | Endpoint | Açıklama |
+|--------|----------|----------|
+| GET | `/api/auth/admin/users/` | Tüm kullanıcıları listele |
+| GET | `/api/auth/admin/users/:id/` | Kullanıcı detayı |
+| PATCH | `/api/auth/admin/users/:id/` | Kullanıcı güncelle |
+| DELETE | `/api/auth/admin/users/:id/` | Kullanıcı sil (deaktive) |
+| GET | `/api/auth/admin/stats/` | Kullanıcı istatistikleri |
+| GET | `/api/providers/admin/stats/` | Platform istatistikleri |
+| GET | `/api/providers/admin/pending/` | Bekleyen provider'lar |
+| POST | `/api/providers/:id/verify/` | Provider onayla |
+| POST | `/api/providers/:id/reject/` | Provider reddet |
+
+---
+
 ## 📄 License
 
 Bu proje MVP (Minimum Viable Product) aşamasındadır.
@@ -336,17 +372,17 @@ Bu proje MVP (Minimum Viable Product) aşamasındadır.
 
 ## 👨‍💻 Geliştirici Notları
 
-**Son Güncelleme:** 2025-01-09
+**Son Güncelleme:** 2025-12-16
 
 **Durum:** MVP tamamlandı ✅
 - Patient flow: ✅
 - Provider flow: ✅
 - Authentication: ✅
-- Admin Dashboard: ⚠️ (UI var, backend entegrasyonu eksik)
+- Admin Dashboard: ✅
 
 **Sonraki Adımlar:**
 1. Firebase Storage entegrasyonu
-2. Admin Dashboard backend
+2. Email notifications
 3. Production deployment
 
 ---

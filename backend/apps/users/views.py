@@ -9,12 +9,16 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .models import User
+from .permissions import IsAdminUser
 from .serializers import (
     LoginSerializer,
     RegisterSerializer,
     UserSerializer,
     UpdateProfileSerializer,
     ChangePasswordSerializer,
+    AdminUserSerializer,
+    AdminUserUpdateSerializer,
     get_tokens_for_user,
 )
 
@@ -249,4 +253,207 @@ class ChangePasswordView(APIView):
             {'detail': 'Password changed successfully.'},
             status=status.HTTP_200_OK
         )
+
+
+# ============================================
+# ADMIN VIEWS
+# ============================================
+
+class AdminUserListView(APIView):
+    """
+    API endpoint for admin to list all users.
+    
+    GET /api/auth/admin/users/
+    
+    Query Parameters:
+        - role: Filter by role (patient, provider, admin)
+        - is_active: Filter by active status (true/false)
+        - search: Search in email, first_name, last_name
+        - page: Page number (default: 1)
+        - limit: Items per page (default: 10)
+    """
+    
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        """List all users with optional filters."""
+        queryset = User.objects.all()
+        
+        # Apply filters
+        role = request.query_params.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+        
+        is_active = request.query_params.get('is_active')
+        if is_active is not None:
+            is_active_bool = is_active.lower() in ('true', '1', 'yes')
+            queryset = queryset.filter(is_active=is_active_bool)
+        
+        search = request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(email__icontains=search) |
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search)
+            )
+        
+        # Ordering
+        sort_by = request.query_params.get('sort_by', 'newest')
+        if sort_by == 'email':
+            queryset = queryset.order_by('email')
+        elif sort_by == 'name':
+            queryset = queryset.order_by('first_name', 'last_name')
+        else:  # newest (default)
+            queryset = queryset.order_by('-created_at')
+        
+        # Pagination
+        page = int(request.query_params.get('page', 1))
+        limit = int(request.query_params.get('limit', 10))
+        offset = (page - 1) * limit
+        
+        total = queryset.count()
+        users = queryset[offset:offset + limit]
+        
+        serializer = AdminUserSerializer(users, many=True)
+        
+        return Response({
+            'data': serializer.data,
+            'pagination': {
+                'page': page,
+                'limit': limit,
+                'total': total,
+                'total_pages': (total + limit - 1) // limit,
+                'has_next': offset + limit < total,
+                'has_prev': page > 1,
+            }
+        })
+
+
+class AdminUserDetailView(APIView):
+    """
+    API endpoint for admin to view/update/delete a user.
+    
+    GET /api/auth/admin/users/:id/
+    PATCH /api/auth/admin/users/:id/
+    DELETE /api/auth/admin/users/:id/
+    """
+    
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request, pk):
+        """Get user details by ID."""
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'User not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = AdminUserSerializer(user)
+        return Response(serializer.data)
+    
+    def patch(self, request, pk):
+        """Update user details."""
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'User not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Prevent admin from deactivating themselves
+        if user == request.user and request.data.get('is_active') == False:
+            return Response(
+                {'detail': 'You cannot deactivate your own account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = AdminUserUpdateSerializer(
+            user,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
+        
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer.save()
+        return Response(AdminUserSerializer(user).data)
+    
+    def delete(self, request, pk):
+        """Delete a user (soft delete by deactivating)."""
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'User not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Prevent admin from deleting themselves
+        if user == request.user:
+            return Response(
+                {'detail': 'You cannot delete your own account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Soft delete - deactivate the user
+        user.is_active = False
+        user.save()
+        
+        return Response(
+            {'detail': 'User has been deactivated.'},
+            status=status.HTTP_200_OK
+        )
+
+
+class AdminUserStatsView(APIView):
+    """
+    API endpoint for user statistics (admin only).
+    
+    GET /api/auth/admin/stats/
+    """
+    
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        """Get user statistics."""
+        from django.db.models import Count
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        total_users = User.objects.count()
+        active_users = User.objects.filter(is_active=True).count()
+        
+        # Users by role
+        role_stats = User.objects.values('role').annotate(count=Count('id'))
+        role_counts = {stat['role']: stat['count'] for stat in role_stats}
+        
+        # New users in last 7 days
+        week_ago = timezone.now() - timedelta(days=7)
+        new_users_week = User.objects.filter(created_at__gte=week_ago).count()
+        
+        # New users in last 30 days
+        month_ago = timezone.now() - timedelta(days=30)
+        new_users_month = User.objects.filter(created_at__gte=month_ago).count()
+        
+        return Response({
+            'total': total_users,
+            'active': active_users,
+            'inactive': total_users - active_users,
+            'by_role': {
+                'patient': role_counts.get('patient', 0),
+                'provider': role_counts.get('provider', 0),
+                'admin': role_counts.get('admin', 0),
+            },
+            'new_this_week': new_users_week,
+            'new_this_month': new_users_month,
+        })
 
