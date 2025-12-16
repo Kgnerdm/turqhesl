@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'drf_spectacular',
     
     # Local apps
     'apps.users',
@@ -192,6 +193,50 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.JSONParser',
     ],
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+
+# DRF Spectacular Settings (Swagger/OpenAPI)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'TurqHeal API',
+    'DESCRIPTION': '''
+## Medical Tourism Platform API
+
+TurqHeal connects international patients with healthcare providers in Turkey.
+
+### Features
+- **Authentication**: JWT-based authentication with access and refresh tokens
+- **Users**: Patient, Provider, and Admin roles
+- **Providers**: Healthcare clinics and hospitals
+- **Packages**: Medical treatment packages
+- **Bookings**: Appointment scheduling system
+- **Favorites**: Save packages to wishlist
+
+### Authentication
+Most endpoints require authentication via Bearer token:
+```
+Authorization: Bearer <access_token>
+```
+
+### Roles
+- **Patient**: Can browse packages, create bookings, manage favorites
+- **Provider**: Can manage their packages and handle bookings  
+- **Admin**: Full access to all resources
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    'TAGS': [
+        {'name': 'Auth', 'description': 'Authentication & User Management'},
+        {'name': 'Providers', 'description': 'Healthcare Provider Operations'},
+        {'name': 'Packages', 'description': 'Medical Treatment Packages'},
+        {'name': 'Bookings', 'description': 'Appointment Bookings'},
+        {'name': 'Favorites', 'description': 'User Favorites/Wishlist'},
+        {'name': 'Search', 'description': 'Search & Autocomplete'},
+        {'name': 'Admin', 'description': 'Admin Dashboard Operations'},
+    ],
 }
 
 # Add BrowsableAPI in debug mode
