@@ -1,0 +1,19 @@
+[run]
+source = apps
+omit =
+    */migrations/*
+    */tests/*
+    */management/*
+    */__pycache__/*
+    */apps.py
+    */admin.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+show_missing = True
+skip_covered = False
+precision = 1
