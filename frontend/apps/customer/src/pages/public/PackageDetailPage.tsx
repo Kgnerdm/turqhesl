@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  MapPin, 
-  Clock, 
-  Check, 
-  X, 
-  Share2, 
+import { motion } from 'motion/react';
+import {
+  MapPin,
+  Clock,
+  Check,
+  X,
+  Share2,
   Heart,
   Phone,
   Mail,
@@ -17,7 +18,7 @@ import {
   AlertCircle,
   Loader2
 } from 'lucide-react';
-import { Button, Card, Badge, PageLoading, Modal, Input } from '@/components/ui';
+import { Button, Card, Badge, PageLoading, Modal, Input, FadeInOnScroll } from '@/components/ui';
 import { formatPrice } from '@/utils/format';
 import { PACKAGE_CATEGORIES, type Package, type CreateBookingRequest } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -241,24 +242,37 @@ const PackageDetailPage = () => {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Images */}
-            <div className="grid grid-cols-2 gap-4">
-              <img
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="grid grid-cols-2 gap-4"
+            >
+              <motion.img
                 src={package_.images[0] || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800'}
                 alt={package_.name}
-                className="col-span-2 w-full h-80 object-cover rounded-2xl"
+                className="col-span-2 w-full h-80 object-cover rounded-2xl shadow-lg"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.4 }}
               />
               {package_.images.slice(1, 3).map((img, index) => (
-                <img
+                <motion.img
                   key={index}
                   src={img}
                   alt={`${package_.name} ${index + 2}`}
-                  className="w-full h-40 object-cover rounded-xl"
+                  className="w-full h-40 object-cover rounded-xl shadow-md"
+                  whileHover={{ scale: 1.04 }}
+                  transition={{ duration: 0.4 }}
                 />
               ))}
-            </div>
+            </motion.div>
 
             {/* Title & Basic Info */}
-            <div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="primary">{PACKAGE_CATEGORIES[package_.category] || package_.category}</Badge>
                 {provider?.isVerified && (
@@ -268,7 +282,7 @@ const PackageDetailPage = () => {
                   </div>
                 )}
               </div>
-              <h1 className="text-3xl font-bold text-gray-900">{package_.name}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">{package_.name}</h1>
               
               <div className="flex flex-wrap items-center gap-4 mt-4 text-gray-600">
                 {provider && (
@@ -286,47 +300,72 @@ const PackageDetailPage = () => {
                   <span>{package_.duration}</span>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Description */}
-            <Card>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">About This Package</h2>
-              <p className="text-gray-600 whitespace-pre-line leading-relaxed">{package_.description}</p>
-            </Card>
+            <FadeInOnScroll>
+              <Card>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">About This Package</h2>
+                <p className="text-gray-600 whitespace-pre-line leading-relaxed">{package_.description}</p>
+              </Card>
+            </FadeInOnScroll>
 
             {/* What's Included */}
-            <Card>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">What&apos;s Included</h2>
-              <div className="grid md:grid-cols-2 gap-3">
-                {package_.includes.map((item, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <Check className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
-                    <span className="text-gray-600">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* What's Not Included */}
-            {package_.excludes.length > 0 && (
+            <FadeInOnScroll delay={0.05}>
               <Card>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Not Included</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">What&apos;s Included</h2>
                 <div className="grid md:grid-cols-2 gap-3">
-                  {package_.excludes.map((item, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <X className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+                  {package_.includes.map((item, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: index * 0.04 }}
+                      className="flex items-start gap-2"
+                    >
+                      <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-600">{item}</span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </Card>
+            </FadeInOnScroll>
+
+            {/* What's Not Included */}
+            {package_.excludes.length > 0 && (
+              <FadeInOnScroll delay={0.1}>
+                <Card>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Not Included</h2>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {package_.excludes.map((item, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -10 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: index * 0.04 }}
+                        className="flex items-start gap-2"
+                      >
+                        <X className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-gray-600">{item}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </Card>
+              </FadeInOnScroll>
             )}
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="space-y-6"
+          >
             {/* Price Card */}
-            <Card className="sticky top-24">
+            <Card className="sticky top-24 shadow-xl">
               <div className="text-center pb-6 border-b">
                 <p className="text-sm text-gray-500">Starting from</p>
                 <p className="text-4xl font-bold text-primary-500 mt-1">
@@ -412,7 +451,7 @@ const PackageDetailPage = () => {
                 </div>
               )}
             </Card>
-          </div>
+          </motion.div>
         </div>
       </div>
 

@@ -1,0 +1,1 @@
+import{j as n,v as t}from"./index-B4OnTd7o.js";const m=({children:r,className:s,hover:o=!1,padding:d="md",...a})=>{const e={none:"",sm:"p-4",md:"p-6",lg:"p-8"};return n.jsx("div",{className:t("bg-white rounded-xl border border-gray-200 shadow-sm",o&&"transition-shadow duration-200 hover:shadow-md cursor-pointer",e[d],s),...a,children:r})};export{m as C};

@@ -186,6 +186,102 @@
   }
 }
 
+/* Modern background utilities */
+@layer utilities {
+  /* Animated gradient mesh — soft moving blobs */
+  .bg-mesh-primary {
+    background:
+      radial-gradient(at 20% 20%, rgba(64, 196, 198, 0.45) 0px, transparent 50%),
+      radial-gradient(at 80% 30%, rgba(30, 58, 95, 0.4) 0px, transparent 55%),
+      radial-gradient(at 60% 80%, rgba(64, 196, 198, 0.3) 0px, transparent 50%),
+      radial-gradient(at 20% 90%, rgba(30, 58, 95, 0.35) 0px, transparent 60%);
+    background-size: 200% 200%;
+    animation: meshMove 18s ease-in-out infinite;
+  }
+
+  @keyframes meshMove {
+    0%, 100% {
+      background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%;
+    }
+    50% {
+      background-position: 100% 100%, 0% 100%, 0% 0%, 100% 0%;
+    }
+  }
+
+  /* Subtle grain texture overlay */
+  .bg-grain {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  }
+
+  /* Shimmer for skeletons */
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(229, 231, 235, 1) 0%,
+      rgba(243, 244, 246, 1) 50%,
+      rgba(229, 231, 235, 1) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Soft glow */
+  .glow-primary {
+    box-shadow: 0 0 40px -8px rgba(64, 196, 198, 0.6),
+                0 0 80px -16px rgba(64, 196, 198, 0.3);
+  }
+
+  /* Animated gradient text */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, #40C4C6 0%, #75D5D6 50%, #1E3A5F 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientShift 6s ease infinite;
+  }
+
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Floating animation for decorative elements */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-float-delayed {
+    animation: float 6s ease-in-out 2s infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+
+  /* Slow spin for orbital decorations */
+  .animate-spin-slow {
+    animation: spin 20s linear infinite;
+  }
+
+  /* Reduced motion respect */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-float,
+    .animate-float-delayed,
+    .animate-spin-slow,
+    .bg-mesh-primary,
+    .text-gradient-primary {
+      animation: none;
+    }
+  }
+}
+
 /* Custom scrollbar for the whole page */
 ::-webkit-scrollbar {
   width: 10px;

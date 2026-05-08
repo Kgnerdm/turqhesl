@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  SlidersHorizontal, 
-  X, 
-  ChevronRight, 
-  Shield, 
-  MapPin, 
-  Stethoscope, 
-  DollarSign, 
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  ChevronRight,
+  Shield,
+  MapPin,
+  Stethoscope,
+  DollarSign,
   SortAsc,
   CheckCircle,
   Check,
@@ -21,6 +22,7 @@ import {
 import { PACKAGE_CATEGORIES, TURKISH_CITIES, type Package } from '@/types';
 import { getPackages, getFavoriteIds, toggleFavorite, type PackagesResponse } from '@/api/packages';
 import { useAuth } from '@/contexts/AuthContext';
+import { FadeInOnScroll, StaggerContainer, StaggerItem } from '@/components/ui';
 
 // Category color mapping
 const categoryColors: Record<string, { bg: string; text: string }> = {
@@ -38,24 +40,23 @@ const categoryColors: Record<string, { bg: string; text: string }> = {
   orthopedic: { bg: 'bg-lime-50', text: 'text-lime-700' },
 };
 
-// Skeleton Card Component
+// Skeleton Card Component — shimmer effect
 const PackageCardSkeleton = () => (
-  <div className="bg-white border-2 border-gray-100 rounded-2xl overflow-hidden animate-pulse">
-    <div className="h-64 bg-gray-300" />
-    <div className="p-6">
-      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-      <div className="h-6 bg-gray-200 rounded w-full mb-2" />
-      <div className="h-6 bg-gray-200 rounded w-2/3 mb-3" />
-      <div className="h-4 bg-gray-200 rounded w-full mb-1" />
-      <div className="h-4 bg-gray-200 rounded w-5/6 mb-4" />
-      <div className="space-y-2 mb-4">
-        <div className="h-4 bg-gray-200 rounded w-4/5" />
-        <div className="h-4 bg-gray-200 rounded w-3/4" />
-        <div className="h-4 bg-gray-200 rounded w-4/5" />
+  <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+    <div className="h-64 animate-shimmer" />
+    <div className="p-6 space-y-3">
+      <div className="h-4 animate-shimmer rounded w-3/4" />
+      <div className="h-6 animate-shimmer rounded w-full" />
+      <div className="h-6 animate-shimmer rounded w-2/3" />
+      <div className="h-4 animate-shimmer rounded w-full" />
+      <div className="h-4 animate-shimmer rounded w-5/6" />
+      <div className="space-y-2">
+        <div className="h-4 animate-shimmer rounded w-4/5" />
+        <div className="h-4 animate-shimmer rounded w-3/4" />
       </div>
       <div className="border-t border-gray-100 pt-4 mt-4">
-        <div className="h-8 bg-gray-200 rounded w-1/3 mb-4" />
-        <div className="h-12 bg-gray-200 rounded w-full" />
+        <div className="h-8 animate-shimmer rounded w-1/3 mb-4" />
+        <div className="h-12 animate-shimmer rounded w-full" />
       </div>
     </div>
   </div>
@@ -110,16 +111,20 @@ const PackageCard = ({ package_, isFavorited = false, onToggleFavorite, isAuthen
   };
 
   return (
-    <div 
-      className="group bg-white border-2 border-gray-100 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-primary hover:shadow-2xl hover:-translate-y-1"
+    <motion.div
+      whileHover={{ y: -8 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      className="group bg-white border border-gray-100 rounded-2xl overflow-hidden cursor-pointer transition-shadow duration-300 hover:border-primary-300 hover:shadow-2xl"
       onClick={() => navigate(`/packages/${package_.id}`)}
     >
       {/* Image Section */}
       <div className="relative h-64 overflow-hidden">
-        <img
+        <motion.img
           src={package_.images[0] || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800'}
           alt={package_.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          className="w-full h-full object-cover"
+          whileHover={{ scale: 1.1 }}
+          transition={{ duration: 0.6 }}
         />
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
@@ -214,13 +219,13 @@ const PackageCard = ({ package_, isFavorited = false, onToggleFavorite, isAuthen
           </div>
 
           {/* View Details Button */}
-          <button className="w-full py-3 bg-primary/10 text-primary font-semibold rounded-lg transition-all flex items-center justify-between px-4 hover:bg-primary hover:text-white">
+          <button className="w-full py-3 bg-primary-50 text-primary-600 font-semibold rounded-lg transition-all flex items-center justify-between px-4 group-hover:bg-primary-500 group-hover:text-white">
             <span>View Details</span>
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
@@ -424,38 +429,58 @@ const PackagesPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Premium Header Section */}
-      <div className="bg-gradient-to-r from-gray-50 via-white to-primary/5 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12">
-          {/* Breadcrumb */}
-          <nav className="flex items-center text-sm mb-4">
-            <Link to="/" className="text-gray-600 hover:text-primary transition-colors">
+      <div className="relative bg-gradient-to-br from-primary-50 via-white to-secondary-50 border-b border-gray-100 overflow-hidden">
+        {/* Decorative blobs */}
+        <div className="absolute -top-20 -right-20 w-72 h-72 bg-primary-200/40 rounded-full blur-3xl animate-float" />
+        <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-secondary-200/40 rounded-full blur-3xl animate-float-delayed" />
+
+        <div className="relative max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-14">
+          <motion.nav
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4 }}
+            className="flex items-center text-sm mb-4"
+          >
+            <Link to="/" className="text-gray-600 hover:text-primary-600 transition-colors">
               Home
             </Link>
             <ChevronRight className="w-4 h-4 text-gray-400 mx-2" />
             <span className="text-gray-900 font-medium">Treatments</span>
-          </nav>
+          </motion.nav>
 
-          {/* Heading */}
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-4xl md:text-5xl font-bold text-gray-900 mb-3 tracking-tight"
+          >
             Medical Packages
-          </h1>
-          
-          {/* Subtitle */}
-          <p className="text-lg text-gray-600 max-w-2xl">
-            Find the perfect treatment package for your needs
-          </p>
+          </motion.h1>
 
-          {/* Stats Row */}
-          <div className="flex items-center gap-6 mt-6">
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-lg text-gray-600 max-w-2xl"
+          >
+            Find the perfect treatment package for your needs
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="flex items-center gap-6 mt-6"
+          >
             <div className="flex items-center gap-2 text-sm">
-              <div className="w-2 h-2 bg-success rounded-full" />
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
               <span className="text-gray-700">{pagination?.total || packages.length} packages found</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Shield className="w-4 h-4 text-primary" />
+              <Shield className="w-4 h-4 text-primary-600" />
               <span className="text-gray-700">All from verified providers</span>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
@@ -463,8 +488,13 @@ const PackagesPage = () => {
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar - Desktop */}
-          <div className="hidden lg:block w-80 flex-shrink-0">
-            <div className="bg-white border-2 border-gray-100 shadow-sm rounded-xl p-6 sticky top-4">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="hidden lg:block w-80 flex-shrink-0"
+          >
+            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 sticky top-4">
               <h3 className="text-lg font-bold text-gray-900 mb-6">Filters</h3>
               
               {/* Search Input */}
@@ -606,14 +636,14 @@ const PackagesPage = () => {
                 <div className="border-t border-gray-200 pt-6">
                   <button
                     onClick={clearFilters}
-                    className="w-full text-primary font-medium hover:underline"
+                    className="w-full text-primary-600 font-medium hover:underline"
                   >
                     Clear all filters
                   </button>
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* Main Content Area */}
           <div className="flex-1">
@@ -637,8 +667,15 @@ const PackagesPage = () => {
             </div>
 
             {/* Mobile Filters Panel */}
+            <AnimatePresence>
             {showFilters && (
-              <div className="lg:hidden bg-white border-2 border-gray-100 rounded-xl p-6 mb-6">
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="lg:hidden bg-white border border-gray-100 rounded-2xl p-6 mb-6 overflow-hidden"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-gray-900">Filters</h3>
                   <button onClick={() => setShowFilters(false)}>
@@ -702,7 +739,7 @@ const PackagesPage = () => {
                   <div className="flex gap-2 pt-2">
                     <button
                       onClick={clearFilters}
-                      className="flex-1 py-3 border-2 border-gray-200 rounded-lg text-gray-700 font-medium hover:border-primary transition-colors"
+                      className="flex-1 py-3 border-2 border-gray-200 rounded-lg text-gray-700 font-medium hover:border-primary-500 transition-colors"
                     >
                       Clear
                     </button>
@@ -711,14 +748,15 @@ const PackagesPage = () => {
                         updateFilters();
                         setShowFilters(false);
                       }}
-                      className="flex-1 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                      className="flex-1 py-3 bg-primary-500 text-white rounded-lg font-medium hover:bg-primary-600 transition-colors"
                     >
                       Apply
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
 
             {/* Error State */}
             {error && (
@@ -734,11 +772,16 @@ const PackagesPage = () => {
             )}
 
             {/* Results Info Bar */}
-            <div className="bg-gray-50 p-4 rounded-lg mb-6 flex justify-between items-center">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="bg-white border border-gray-100 p-4 rounded-xl mb-6 flex justify-between items-center shadow-sm"
+            >
               <span className="text-sm font-medium text-gray-700">
                 {pagination?.total || packages.length} packages found
               </span>
-            </div>
+            </motion.div>
 
             {/* Package Grid */}
             {isLoading ? (
@@ -748,19 +791,25 @@ const PackagesPage = () => {
                 ))}
               </div>
             ) : packages.length === 0 ? (
-              <EmptyState onClearFilters={clearFilters} />
+              <FadeInOnScroll>
+                <EmptyState onClearFilters={clearFilters} />
+              </FadeInOnScroll>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              <StaggerContainer
+                staggerDelay={0.06}
+                className="grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+              >
                 {packages.map((pkg) => (
-                  <PackageCard 
-                    key={pkg.id} 
-                    package_={pkg}
-                    isFavorited={favoriteIds.has(parseInt(pkg.id))}
-                    onToggleFavorite={handleToggleFavorite}
-                    isAuthenticated={isAuthenticated}
-                  />
+                  <StaggerItem key={pkg.id}>
+                    <PackageCard
+                      package_={pkg}
+                      isFavorited={favoriteIds.has(parseInt(pkg.id))}
+                      onToggleFavorite={handleToggleFavorite}
+                      isAuthenticated={isAuthenticated}
+                    />
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerContainer>
             )}
           </div>
         </div>

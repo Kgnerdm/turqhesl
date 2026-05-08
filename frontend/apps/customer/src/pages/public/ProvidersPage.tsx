@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { 
-  Search, 
-  SlidersHorizontal, 
-  X, 
-  MapPin, 
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  MapPin,
   Shield,
   CheckCircle,
   ArrowRight,
@@ -13,7 +14,7 @@ import {
   SortAsc,
   Building2
 } from 'lucide-react';
-import { Button, Select } from '@/components/ui';
+import { Button, Select, FadeInOnScroll, StaggerContainer, StaggerItem } from '@/components/ui';
 import { getProviders, type ProvidersResponse } from '@/api/providers';
 import type { Provider } from '@/types';
 
@@ -125,35 +126,55 @@ const ProvidersPage = () => {
       {/* ============================================ */}
       {/* HEADER SECTION */}
       {/* ============================================ */}
-      <div className="bg-gradient-to-b from-gray-50 to-primary-50/30 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+      <div className="relative bg-gradient-to-br from-secondary-50 via-white to-primary-50 border-b border-gray-100 overflow-hidden">
+        <div className="absolute -top-20 -left-20 w-72 h-72 bg-primary-200/40 rounded-full blur-3xl animate-float" />
+        <div className="absolute -bottom-20 -right-20 w-72 h-72 bg-secondary-200/40 rounded-full blur-3xl animate-float-delayed" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <motion.nav
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4 }}
+            className="flex items-center gap-2 text-sm text-gray-500 mb-6"
+          >
             <Link to="/" className="hover:text-primary-600 transition-colors">Home</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="text-gray-900 font-medium">Clinics</span>
-          </nav>
+          </motion.nav>
 
-          {/* Title */}
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight"
+          >
             Healthcare Providers
-          </h1>
-          <p className="text-lg text-gray-600 mb-6">
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-lg text-gray-600 mb-6"
+          >
             Discover verified clinics and hospitals across Turkey
-          </p>
+          </motion.p>
 
-          {/* Stats Row */}
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-2 text-gray-700">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="flex flex-wrap items-center gap-4"
+          >
+            <div className="flex items-center gap-2 text-gray-700 px-4 py-2 bg-white/70 backdrop-blur-sm rounded-full border border-gray-200">
               <Building2 className="w-5 h-5 text-primary-600" />
               <span className="font-semibold">{pagination?.total || providers.length} providers</span>
               <span className="text-gray-500">found</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full">
-              <Shield className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-700">All Verified</span>
+            <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full shadow-md">
+              <Shield className="w-4 h-4 text-white" />
+              <span className="text-sm font-semibold text-white">All Verified</span>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
@@ -165,8 +186,13 @@ const ProvidersPage = () => {
           {/* ============================================ */}
           {/* FILTERS SIDEBAR - Desktop */}
           {/* ============================================ */}
-          <div className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-4 bg-white border-2 border-gray-100 rounded-2xl shadow-sm p-6">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="hidden lg:block w-80 flex-shrink-0"
+          >
+            <div className="sticky top-4 bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-6">Filters</h3>
               
               <div className="space-y-6">
@@ -261,7 +287,7 @@ const ProvidersPage = () => {
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* ============================================ */}
           {/* MAIN CONTENT AREA */}
@@ -287,8 +313,15 @@ const ProvidersPage = () => {
             </div>
 
             {/* Mobile Filters Panel */}
+            <AnimatePresence>
             {showFilters && (
-              <div className="lg:hidden bg-white border-2 border-gray-100 rounded-2xl p-6 mb-6 shadow-sm">
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="lg:hidden bg-white border border-gray-100 rounded-2xl p-6 mb-6 shadow-sm overflow-hidden"
+              >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-gray-900">Filters</h3>
                   <button onClick={() => setShowFilters(false)} className="p-1 hover:bg-gray-100 rounded-lg">
@@ -336,8 +369,9 @@ const ProvidersPage = () => {
                     </Button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
 
             {/* Results Info Bar - Desktop */}
             <div className="hidden lg:flex items-center justify-between bg-gray-50 rounded-xl p-4 mb-6">
@@ -363,21 +397,21 @@ const ProvidersPage = () => {
               /* Loading Skeleton */
               <div className="grid md:grid-cols-2 gap-6">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="bg-white border-2 border-gray-100 rounded-2xl overflow-hidden animate-pulse">
-                    <div className="h-56 bg-gray-200" />
-                    <div className="p-6">
-                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-3" />
-                      <div className="h-4 bg-gray-200 rounded w-1/2 mb-4" />
-                      <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-                      <div className="h-4 bg-gray-200 rounded w-5/6 mb-4" />
-                      <div className="flex gap-2 mb-4">
-                        <div className="h-6 bg-gray-200 rounded-full w-20" />
-                        <div className="h-6 bg-gray-200 rounded-full w-24" />
+                  <div key={i} className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                    <div className="h-56 animate-shimmer" />
+                    <div className="p-6 space-y-3">
+                      <div className="h-6 animate-shimmer rounded w-3/4" />
+                      <div className="h-4 animate-shimmer rounded w-1/2" />
+                      <div className="h-4 animate-shimmer rounded w-full" />
+                      <div className="h-4 animate-shimmer rounded w-5/6" />
+                      <div className="flex gap-2">
+                        <div className="h-6 animate-shimmer rounded-full w-20" />
+                        <div className="h-6 animate-shimmer rounded-full w-24" />
                       </div>
-                      <div className="h-4 bg-gray-200 rounded w-1/3 mb-4" />
+                      <div className="h-4 animate-shimmer rounded w-1/3" />
                       <div className="pt-4 border-t border-gray-100">
-                        <div className="h-4 bg-gray-200 rounded w-2/3 mb-4" />
-                        <div className="h-12 bg-gray-200 rounded-xl" />
+                        <div className="h-4 animate-shimmer rounded w-2/3 mb-4" />
+                        <div className="h-12 animate-shimmer rounded-xl" />
                       </div>
                     </div>
                   </div>
@@ -385,7 +419,7 @@ const ProvidersPage = () => {
               </div>
             ) : providers.length === 0 ? (
               /* Empty State */
-              <div className="flex flex-col items-center justify-center py-20 px-4">
+              <FadeInOnScroll className="flex flex-col items-center justify-center py-20 px-4">
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
                   <Building2 className="w-12 h-12 text-gray-300" />
                 </div>
@@ -396,23 +430,29 @@ const ProvidersPage = () => {
                 <Button onClick={clearFilters}>
                   Clear all filters
                 </Button>
-              </div>
+              </FadeInOnScroll>
             ) : (
               /* Provider Cards Grid */
-              <div className="grid md:grid-cols-2 gap-6">
+              <StaggerContainer staggerDelay={0.08} className="grid md:grid-cols-2 gap-6">
                 {providers.map((provider) => (
-                  <Link 
-                    key={provider.id} 
+                  <StaggerItem key={provider.id}>
+                  <Link
                     to={`/providers/${provider.id}`}
-                    className="group"
+                    className="group block h-full"
                   >
-                    <div className="bg-white border-2 border-gray-100 rounded-2xl overflow-hidden hover:border-primary-400 hover:shadow-2xl transition-all duration-300">
+                    <motion.div
+                      whileHover={{ y: -8 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-primary-300 hover:shadow-2xl transition-shadow duration-300 h-full"
+                    >
                       {/* Image Section */}
                       <div className="relative h-56 overflow-hidden">
-                        <img
+                        <motion.img
                           src={provider.coverImageUrl || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800'}
                           alt={provider.businessName}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="w-full h-full object-cover"
+                          whileHover={{ scale: 1.1 }}
+                          transition={{ duration: 0.6 }}
                         />
                         {/* Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
@@ -481,10 +521,11 @@ const ProvidersPage = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   </Link>
+                  </StaggerItem>
                 ))}
-              </div>
+              </StaggerContainer>
             )}
           </div>
         </div>

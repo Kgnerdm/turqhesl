@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { motion } from 'motion/react';
 import { Mail, Lock, Eye, EyeOff, User, Phone, Heart, Building2, UserCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, Input, Card } from '@/components/ui';
@@ -67,25 +68,50 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4 overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-secondary-50 via-white to-primary-50" />
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary-200/40 rounded-full blur-3xl animate-float" />
+      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-secondary-200/40 rounded-full blur-3xl animate-float-delayed" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative w-full max-w-md"
+      >
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2">
-            <Heart className="w-10 h-10 text-primary-500" fill="currentColor" />
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <Heart className="w-10 h-10 text-primary-500" fill="currentColor" />
+            </motion.div>
             <span className="text-2xl font-bold text-secondary-500">
               Turq<span className="text-primary-500">Heal</span>
             </span>
           </Link>
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mt-6 text-3xl font-bold text-gray-900 tracking-tight"
+          >
             Create your account
-          </h1>
-          <p className="mt-2 text-gray-600">
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="mt-2 text-gray-600"
+          >
             Start your health journey with us
-          </p>
+          </motion.p>
         </div>
 
-        <Card padding="lg">
+        <Card padding="lg" className="bg-white/80 backdrop-blur-xl border-white/40 shadow-2xl">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {error && (
               <div className="p-3 text-sm text-error bg-red-50 rounded-lg">
@@ -253,7 +279,7 @@ const RegisterPage = () => {
             </Link>
           </div>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -18,3 +18,13 @@ export { default as Avatar } from './Avatar';
 
 export { default as SearchAutocomplete } from './SearchAutocomplete';
 
+export {
+  FadeInOnScroll,
+  StaggerContainer,
+  StaggerItem,
+  NumberCounter,
+  TiltCard,
+  MagneticWrapper,
+  PageTransition,
+} from './Motion';
+

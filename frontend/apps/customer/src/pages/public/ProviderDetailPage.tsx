@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Globe, 
+import { motion } from 'motion/react';
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
   BadgeCheck,
   ChevronLeft,
   Clock,
@@ -14,7 +15,7 @@ import {
   Check,
   ArrowRight
 } from 'lucide-react';
-import { Button, Card, Badge, PageLoading } from '@/components/ui';
+import { Button, Card, Badge, PageLoading, FadeInOnScroll, StaggerContainer, StaggerItem } from '@/components/ui';
 import { getProvider } from '@/api/providers';
 import { getProviderPackages } from '@/api/packages';
 import type { Provider, Package } from '@/types';
@@ -40,13 +41,19 @@ const ProviderPackageCard = ({ package_ }: { package_: Package }) => {
 
   return (
     <Link to={`/packages/${package_.id}`}>
-      <div className="group bg-white border-2 border-gray-100 rounded-2xl overflow-hidden transition-all duration-300 hover:border-primary hover:shadow-2xl hover:-translate-y-1">
+      <motion.div
+        whileHover={{ y: -8 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        className="group bg-white border border-gray-100 rounded-2xl overflow-hidden transition-shadow duration-300 hover:border-primary-300 hover:shadow-2xl"
+      >
         {/* Image Section */}
         <div className="relative h-48 overflow-hidden">
-          <img
+          <motion.img
             src={package_.images[0] || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800'}
             alt={package_.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="w-full h-full object-cover"
+            whileHover={{ scale: 1.1 }}
+            transition={{ duration: 0.6 }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
           
@@ -83,7 +90,7 @@ const ProviderPackageCard = ({ package_ }: { package_: Package }) => {
           <div className="flex items-end justify-between pt-4 border-t border-gray-100">
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide">Starting from</p>
-              <p className="text-xl font-bold text-primary">${package_.price.toLocaleString()}</p>
+              <p className="text-xl font-bold text-primary-600">${package_.price.toLocaleString()}</p>
             </div>
             <div className="flex items-center gap-1 text-sm text-gray-500">
               <Clock className="w-4 h-4" />
@@ -91,7 +98,7 @@ const ProviderPackageCard = ({ package_ }: { package_: Package }) => {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </Link>
   );
 };
@@ -151,30 +158,48 @@ const ProviderDetailPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Cover Image */}
-      <div className="relative h-64 md:h-80">
-        <img
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative h-64 md:h-96 overflow-hidden"
+      >
+        <motion.img
           src={provider.coverImageUrl || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200'}
           alt={provider.businessName}
           className="w-full h-full object-cover"
+          initial={{ scale: 1.1 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute top-4 left-4">
-          <Link 
-            to="/providers" 
-            className="inline-flex items-center px-3 py-1.5 bg-white/90 backdrop-blur rounded-full text-sm text-gray-700 hover:bg-white transition-colors"
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="absolute top-4 left-4"
+        >
+          <Link
+            to="/providers"
+            className="inline-flex items-center px-4 py-2 bg-white/90 backdrop-blur-md rounded-full text-sm text-gray-700 hover:bg-white shadow-md transition-all"
           >
             <ChevronLeft className="w-4 h-4 mr-1" />
             Back
           </Link>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-16 relative z-10 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10 pb-12">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Header Card */}
-            <Card>
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            >
+            <Card className="shadow-xl">
               <div className="flex flex-col md:flex-row md:items-start gap-6">
                 <img
                   src={provider.logoUrl || 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=100'}
@@ -214,63 +239,80 @@ const ProviderDetailPage = () => {
                 </div>
               </div>
             </Card>
+            </motion.div>
 
             {/* About */}
-            <Card>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
-              <p className="text-gray-600 whitespace-pre-line leading-relaxed">{provider.description}</p>
-            </Card>
+            <FadeInOnScroll>
+              <Card>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">About</h2>
+                <p className="text-gray-600 whitespace-pre-line leading-relaxed">{provider.description}</p>
+              </Card>
+            </FadeInOnScroll>
 
             {/* Certificates */}
             {provider.certificates.length > 0 && (
-              <Card>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Certifications</h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {provider.certificates.map((cert) => (
-                    <div key={cert.id} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <BadgeCheck className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{cert.name}</p>
-                        <p className="text-sm text-gray-500">{cert.issuedBy}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              <FadeInOnScroll delay={0.05}>
+                <Card>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Certifications</h2>
+                  <StaggerContainer staggerDelay={0.06} className="grid md:grid-cols-2 gap-4">
+                    {provider.certificates.map((cert) => (
+                      <StaggerItem key={cert.id}>
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          className="flex items-center gap-3 p-4 bg-gradient-to-br from-primary-50 to-white rounded-xl border border-primary-100"
+                        >
+                          <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                            <BadgeCheck className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{cert.name}</p>
+                            <p className="text-sm text-gray-500">{cert.issuedBy}</p>
+                          </div>
+                        </motion.div>
+                      </StaggerItem>
+                    ))}
+                  </StaggerContainer>
+                </Card>
+              </FadeInOnScroll>
             )}
 
             {/* Packages */}
-            <div>
+            <FadeInOnScroll delay={0.1}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-2xl font-bold text-gray-900">
                   Available Packages ({packages.length})
                 </h2>
                 {packages.length > 0 && (
-                  <Link to={`/packages?provider=${id}`} className="text-primary font-medium text-sm hover:underline flex items-center gap-1">
+                  <Link to={`/packages?provider=${id}`} className="text-primary-600 font-medium text-sm hover:underline flex items-center gap-1">
                     View all <ArrowRight className="w-4 h-4" />
                   </Link>
                 )}
               </div>
               {packages.length > 0 ? (
-                <div className="grid md:grid-cols-2 gap-6">
+                <StaggerContainer staggerDelay={0.08} className="grid md:grid-cols-2 gap-6">
                   {packages.map((pkg) => (
-                    <ProviderPackageCard key={pkg.id} package_={pkg} />
+                    <StaggerItem key={pkg.id}>
+                      <ProviderPackageCard package_={pkg} />
+                    </StaggerItem>
                   ))}
-                </div>
+                </StaggerContainer>
               ) : (
                 <div className="bg-gray-50 rounded-xl p-8 text-center">
                   <p className="text-gray-600">No packages available at the moment.</p>
                 </div>
               )}
-            </div>
+            </FadeInOnScroll>
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="space-y-6"
+          >
             {/* Contact Card */}
-            <Card className="sticky top-24">
+            <Card className="sticky top-24 shadow-xl">
               <h3 className="font-semibold text-gray-900 mb-4">Contact Information</h3>
               
               <div className="space-y-3">
@@ -337,7 +379,7 @@ const ProviderDetailPage = () => {
                 Contact Provider
               </Button>
             </Card>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>
