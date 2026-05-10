@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'apps.packages',
     'apps.bookings',
     'apps.notifications',
+    'apps.payments',
 ]
 
 MIDDLEWARE = [
@@ -363,3 +364,15 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'TurqHeal <noreply@turqheal
 
 # Customer-facing URLs used in email links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3001')
+
+
+# ----------------------------------------------------------------------
+# Payments — provider selection
+# ----------------------------------------------------------------------
+# 'mock' (default) — local sandbox, no network calls. Use for demo + CI.
+# 'stripe' — production. Requires `pip install stripe` and STRIPE_* env vars.
+PAYMENT_PROVIDER = os.getenv('PAYMENT_PROVIDER', 'mock')
+
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')

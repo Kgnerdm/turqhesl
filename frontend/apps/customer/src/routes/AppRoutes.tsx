@@ -26,6 +26,7 @@ const AdminDashboard = lazy(() => import('@/pages/dashboard/admin/AdminDashboard
 
 // Profile page
 const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'));
+const CheckoutPage = lazy(() => import('@/pages/payments/CheckoutPage'));
 
 /**
  * Suspense wrapper for lazy loaded components
@@ -131,6 +132,18 @@ const AppRoutes = () => {
           }
         />
       </Route>
+
+      {/* Payment checkout — token in URL, page itself does the auth */}
+      <Route
+        path="payments/checkout/:token"
+        element={
+          <ProtectedRoute>
+            <LazyPage>
+              <CheckoutPage />
+            </LazyPage>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Patient dashboard routes */}
       <Route element={<MainLayout hideFooter />}>

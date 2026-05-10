@@ -24,6 +24,7 @@ import { PACKAGE_CATEGORIES, type Package, type CreateBookingRequest } from '@/t
 import { useAuth } from '@/contexts/AuthContext';
 import { getPackage, toggleFavorite, checkFavorite } from '@/api/packages';
 import { createBooking } from '@/api/bookings';
+import { initiatePayment } from '@/api/payments';
 
 const PackageDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -170,7 +171,18 @@ const PackageDetailPage = () => {
 
       const booking = await createBooking(bookingData);
       setCreatedBookingId(booking.id);
-      setBookingStep('success');
+
+      // Kick off the payment session and redirect to the mock checkout page.
+      try {
+        const init = await initiatePayment(booking.id);
+        navigate(init.checkout_url);
+        return;
+      } catch (paymentErr) {
+        // If payment init fails we still show the success step so the patient
+        // knows the booking was created — they can pay from the dashboard later.
+        console.error('Payment init failed:', paymentErr);
+        setBookingStep('success');
+      }
     } catch (err: unknown) {
       console.error('Booking failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create booking. Please try again.';
