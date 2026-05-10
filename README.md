@@ -1,6 +1,77 @@
-# 🏥 TurqHeal - Health Tourism Marketplace MVP
+# 🏥 TurqHeal — Health Tourism Marketplace
 
-TurqHeal, Türkiye'deki sağlık turizmi sağlayıcılarını uluslararası hastalarla buluşturan modern bir platformdur. Provider'lar tedavi paketleri oluşturur, hastalar bunları keşfedip rezervasyon yapar.
+> **Senior Design Project** · Acıbadem University · Computer Engineering
+> Kağan Erdem (210402040) · Onur Duyal (210402034)
+
+TurqHeal, Türkiye'deki sağlık turizmi sağlayıcılarını uluslararası hastalarla
+buluşturan production-ready bir B2B/B2C marketplace platformudur. Provider'lar
+tedavi paketleri oluşturur, hastalar bunları keşfeder, AI destekli öneri alır,
+rezervasyon yapar ve ödeme tamamlar.
+
+## 🎯 Proje Durumu — May 2026
+
+| | |
+|---|---|
+| **Status** | ✅ Production-ready (live deploy hariç) |
+| **Tests** | 171 passing · 79.8% coverage |
+| **API endpoints** | 47+ |
+| **Pull requests merged (Semester 2)** | 8 |
+| **Security audit** | Clean (0 high-severity runtime CVE) |
+
+### 📑 Ana Dokümanlar
+
+- **[SENIOR_DESIGN_FINAL_DOCUMENT.md](./SENIOR_DESIGN_FINAL_DOCUMENT.md)** — Final raporu (Sem 1 + Sem 2)
+- **[SENIOR_DESIGN_PROJECT_REPORT.md](./SENIOR_DESIGN_PROJECT_REPORT.md)** — Sem 1 detaylı raporu (MVP)
+- **[DEMO_SCRIPT.md](./DEMO_SCRIPT.md)** — Sunum akışı + olası jüri soruları
+- **[docs/architecture.md](./docs/architecture.md)** — Mimari diyagramları (Mermaid)
+
+### 🚀 Hızlı Başlangıç
+
+```bash
+# 1. Servisler
+brew services start postgresql@16
+brew services start redis
+
+# 2. Backend (terminal 1)
+cd backend && source venv/bin/activate
+pip install -r requirements-dev.txt
+python manage.py migrate
+python manage.py runserver
+
+# 3. Celery worker (terminal 2)
+cd backend && source venv/bin/activate
+celery -A config worker -l info
+
+# 4. Customer frontend (terminal 3)
+cd frontend/apps/customer && npm install && npm run dev   # :3001
+
+# 5. Admin frontend (terminal 4)
+cd frontend/apps/admin && npm install && npm run dev   # :3000
+```
+
+URL'ler: http://localhost:3001 (customer) · http://localhost:3000 (admin) · http://localhost:8000/api/docs/ (Swagger)
+
+### 🧪 Test Çalıştırma
+
+```bash
+cd backend
+pytest --cov           # 171 test, ~12s, %79.8 coverage
+```
+
+### 📊 Sem 2 Çıktıları (kronolojik)
+
+| # | İş | Durum |
+|---|-----|-------|
+| 1 | PostgreSQL migration (SQLite atıldı) | ✅ |
+| 2 | Cloudinary cloud storage + signed URLs | ✅ |
+| 3 | Mock + Stripe-ready payment flow (3 senaryolu test card) | ✅ |
+| 4 | Celery + Redis + 6 transactional email task | ✅ |
+| 5 | pytest + GitHub Actions CI (171 test, %79.8 cov) | ✅ |
+| 6 | Security audit + dependency CVE patches + rate limiting | ✅ |
+| 7 | AI Smart Match (Llama 3.3 70B + local keyword fallback) | ✅ |
+| 8 | Frontend modernization (Framer Motion) | ✅ |
+| 9 | Health endpoint + architecture docs | ✅ |
+| — | Live deploy + Reviews + Multi-language | 🔮 Future Work |
 
 ---
 
