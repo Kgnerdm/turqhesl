@@ -26,6 +26,7 @@ import {
   TiltCard,
   MagneticWrapper,
 } from '@/components/ui';
+import SmartMatch from '@/components/SmartMatch';
 import { PACKAGE_CATEGORIES, TURKISH_CITIES, type Provider } from '@/types';
 import { getProviders, getPlatformStats, type PlatformStats } from '@/api/providers';
 
@@ -450,6 +451,11 @@ const HomePage = () => {
           </StaggerContainer>
         </div>
       </section>
+
+      {/* ============================================ */}
+      {/* SECTION 2.5: AI SMART MATCH */}
+      {/* ============================================ */}
+      <SmartMatch />
 
       {/* ============================================ */}
       {/* SECTION 3: FEATURED PROVIDERS */}

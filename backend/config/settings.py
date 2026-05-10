@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.bookings',
     'apps.notifications',
     'apps.payments',
+    'apps.ai',
 ]
 
 MIDDLEWARE = [
@@ -190,6 +191,7 @@ REST_FRAMEWORK = {
         'auth': '20/minute',         # login / register
         'password_reset': '5/minute',  # rate-limit reset spam
         'payment': '30/minute',
+        'ai': '10/minute',  # LLM-backed Smart Match
     },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
@@ -415,3 +417,13 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = 'same-origin'
     X_FRAME_OPTIONS = 'DENY'
+
+
+# ----------------------------------------------------------------------
+# AI Smart Match — LLM-powered package recommendations
+# ----------------------------------------------------------------------
+# AI_PROVIDER: 'groq' (default in prod) or 'mock' (no network, tests/demo without key)
+# Get a free GROQ_API_KEY at https://console.groq.com (no credit card)
+AI_PROVIDER = os.getenv('AI_PROVIDER', '')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.3-70b-versatile')

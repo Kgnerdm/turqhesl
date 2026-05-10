@@ -23,6 +23,9 @@ cloudinary>=1.44,<2
 celery[redis]>=5.4,<6
 django-celery-results>=2.5,<3
 
+# AI Smart Match (LLM-driven package recommendations)
+httpx>=0.27,<1
+
 # Development
 ipython>=8.0
 
