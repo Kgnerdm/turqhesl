@@ -10,9 +10,12 @@ from .views import (
     AdminStatsView,
     MyProviderView,
     PlatformStatsView,
+    ProviderCoverUploadView,
     ProviderCreateView,
     ProviderDetailView,
+    ProviderGalleryUploadView,
     ProviderListView,
+    ProviderLogoUploadView,
     ProviderUpdateView,
     ProviderVerifyView,
 )
@@ -26,6 +29,11 @@ urlpatterns = [
     
     # Current user's provider profile
     path('me/', MyProviderView.as_view(), name='me'),
+
+    # Media uploads (provider self-service)
+    path('me/upload-logo/', ProviderLogoUploadView.as_view(), name='upload-logo'),
+    path('me/upload-cover/', ProviderCoverUploadView.as_view(), name='upload-cover'),
+    path('me/upload-gallery/', ProviderGalleryUploadView.as_view(), name='upload-gallery'),
     
     # Public stats (no auth required)
     path('stats/public/', PlatformStatsView.as_view(), name='public-stats'),

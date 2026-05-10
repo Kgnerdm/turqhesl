@@ -3,6 +3,8 @@ from .views import (
     BookingListView,
     BookingDetailView,
     BookingCreateView,
+    BookingDocumentSignedURLView,
+    BookingDocumentUploadView,
     BookingStatusUpdateView,
     BookingCancelView,
     MyBookingsView,
@@ -32,5 +34,17 @@ urlpatterns = [
     path('<int:pk>/', BookingDetailView.as_view(), name='booking-detail'),
     path('<int:pk>/status/', BookingStatusUpdateView.as_view(), name='booking-status-update'),
     path('<int:pk>/cancel/', BookingCancelView.as_view(), name='booking-cancel'),
+
+    # Private medical document upload (Cloudinary authenticated resource)
+    path(
+        '<int:pk>/upload-document/',
+        BookingDocumentUploadView.as_view(),
+        name='booking-document-upload',
+    ),
+    path(
+        '<int:pk>/document-url/',
+        BookingDocumentSignedURLView.as_view(),
+        name='booking-document-signed-url',
+    ),
 ]
 

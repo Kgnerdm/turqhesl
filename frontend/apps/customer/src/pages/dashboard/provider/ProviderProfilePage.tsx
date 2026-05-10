@@ -18,9 +18,15 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button, Card, Input, Badge } from '@/components/ui';
+import { Button, Card, Input, Badge, ImageUploader, GalleryUploader } from '@/components/ui';
 import { TURKISH_CITIES, PACKAGE_CATEGORIES, type Provider } from '@/types';
 import { getMyProvider, createProvider, updateProvider } from '@/api/providers';
+import {
+  uploadProviderLogo,
+  uploadProviderCover,
+  uploadProviderGallery,
+  deleteProviderGalleryImage,
+} from '@/api/uploads';
 
 // Provider categories for selection
 const PROVIDER_CATEGORIES = Object.entries(PACKAGE_CATEGORIES).map(([value, label]) => ({
@@ -84,6 +90,7 @@ const ProviderProfilePage = () => {
   });
   
   const [isVerified, setIsVerified] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
 
   // Load provider data
   useEffect(() => {
@@ -110,6 +117,11 @@ const ProviderProfilePage = () => {
           coverImageUrl: provider.coverImageUrl || '',
           categories: provider.categories,
         });
+
+        // Populate gallery
+        if (provider.images && Array.isArray(provider.images)) {
+          setGalleryImages(provider.images);
+        }
         
         // Populate working hours
         if (provider.workingHours) {
@@ -451,52 +463,62 @@ const ProviderProfilePage = () => {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Input
-                  id="logo-url"
-                  label="Logo URL (Optional)"
-                  type="url"
-                  value={formData.logoUrl}
-                  onChange={(e) => handleFieldChange('logoUrl', e.target.value)}
-                  placeholder="https://example.com/logo.jpg"
-                  leftIcon={<Image className="w-4 h-4" />}
+            {hasProfile ? (
+              <div className="grid md:grid-cols-3 gap-4">
+                <ImageUploader
+                  label="Logo"
+                  value={formData.logoUrl || null}
+                  aspectRatio="1/1"
+                  rounded="2xl"
+                  onSelect={async (file) => {
+                    const asset = await uploadProviderLogo(file);
+                    handleFieldChange('logoUrl', asset.url);
+                  }}
                 />
-                {formData.logoUrl && (
-                  <div className="mt-2">
-                    <img 
-                      src={formData.logoUrl} 
-                      alt="Logo preview" 
-                      className="w-16 h-16 object-cover rounded-lg border"
-                      onError={(e) => (e.currentTarget.style.display = 'none')}
-                    />
-                  </div>
-                )}
+                <div className="md:col-span-2">
+                  <ImageUploader
+                    label="Cover Image"
+                    value={formData.coverImageUrl || null}
+                    aspectRatio="16/9"
+                    onSelect={async (file) => {
+                      const asset = await uploadProviderCover(file);
+                      handleFieldChange('coverImageUrl', asset.url);
+                    }}
+                  />
+                </div>
               </div>
-
-              <div>
-                <Input
-                  id="cover-image-url"
-                  label="Cover Image URL (Optional)"
-                  type="url"
-                  value={formData.coverImageUrl}
-                  onChange={(e) => handleFieldChange('coverImageUrl', e.target.value)}
-                  placeholder="https://example.com/cover.jpg"
-                  leftIcon={<Image className="w-4 h-4" />}
-                />
-                {formData.coverImageUrl && (
-                  <div className="mt-2">
-                    <img 
-                      src={formData.coverImageUrl} 
-                      alt="Cover preview" 
-                      className="w-full h-24 object-cover rounded-lg border"
-                      onError={(e) => (e.currentTarget.style.display = 'none')}
-                    />
-                  </div>
-                )}
+            ) : (
+              <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-900">
+                <strong>Save your profile first</strong> to enable image uploads. After saving the basic information, you'll be able to upload your logo, cover, and gallery images.
               </div>
-            </div>
+            )}
           </Card>
+
+          {/* Gallery */}
+          {hasProfile && (
+            <Card>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Image className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Photo Gallery</h2>
+                  <p className="text-sm text-gray-500">Showcase your facility — patients see these on your profile</p>
+                </div>
+              </div>
+              <GalleryUploader
+                images={galleryImages}
+                onUpload={async (files) => {
+                  const result = await uploadProviderGallery(files);
+                  setGalleryImages((prev) => [...prev, ...result.uploaded.map((u) => u.url)]);
+                }}
+                onRemove={async (url) => {
+                  await deleteProviderGalleryImage(url);
+                  setGalleryImages((prev) => prev.filter((u) => u !== url));
+                }}
+              />
+            </Card>
+          )}
 
           {/* Categories */}
           <Card>

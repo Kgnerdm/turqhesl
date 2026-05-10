@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     
     # Local apps
+    'apps.core',
     'apps.users',
     'apps.providers',
     'apps.packages',
@@ -170,6 +171,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FormParser',
     ],
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
@@ -304,3 +307,18 @@ LOGGING = {
     },
 }
 
+
+
+# Cloudinary (media storage with image optimization + signed URLs)
+import cloudinary
+
+CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME', '')
+CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY', '')
+CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET', '')
+
+cloudinary.config(
+    cloud_name=CLOUDINARY_CLOUD_NAME,
+    api_key=CLOUDINARY_API_KEY,
+    api_secret=CLOUDINARY_API_SECRET,
+    secure=True,  # always use HTTPS for delivered URLs
+)

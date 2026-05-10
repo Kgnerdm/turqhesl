@@ -327,3 +327,165 @@ class BookingStatsView(APIView):
         
         return Response(stats)
 
+
+
+# ----------------------------------------------------------------------
+# Cloudinary document upload (private, signed URL)
+# ----------------------------------------------------------------------
+
+from django.utils import timezone
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+from apps.core.storage import (
+    StorageError,
+    delete_resource,
+    signed_document_url,
+    upload_document,
+)
+
+
+class BookingDocumentUploadView(APIView):
+    """
+    POST /api/bookings/<id>/upload-document/
+    multipart/form-data with field 'file'
+
+    Upload a private medical document. Storage uses Cloudinary's
+    'authenticated' resource type, so delivery requires a signed URL.
+
+    DELETE /api/bookings/<id>/upload-document/
+    body: { "public_id": "..." }
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def _resolve_booking(self, request, pk):
+        user = request.user
+        if user.role == 'admin':
+            return Booking.objects.filter(pk=pk).first()
+        if user.role == 'provider':
+            return Booking.objects.filter(pk=pk, provider__user=user).first()
+        return Booking.objects.filter(pk=pk, patient=user).first()
+
+    def post(self, request, pk):
+        booking = self._resolve_booking(request, pk)
+        if booking is None:
+            return Response(
+                {'detail': 'Booking not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response(
+                {'detail': 'No file uploaded. Use field name "file".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            asset = upload_document(
+                file_obj,
+                folder=f'turqheal/bookings/{booking.pk}/documents',
+                content_type=file_obj.content_type,
+                tags=[f'booking_{booking.pk}', 'medical_document'],
+            )
+        except StorageError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        documents = list(booking.documents) if isinstance(booking.documents, list) else []
+        documents.append({
+            'public_id': asset.public_id,
+            'filename': getattr(file_obj, 'name', ''),
+            'bytes': asset.bytes,
+            'uploaded_at': timezone.now().isoformat(),
+            'uploaded_by': request.user.id,
+        })
+        booking.documents = documents
+        booking.save(update_fields=['documents', 'updated_at'])
+
+        return Response(
+            {
+                'public_id': asset.public_id,
+                'filename': getattr(file_obj, 'name', ''),
+                'bytes': asset.bytes,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def delete(self, request, pk):
+        booking = self._resolve_booking(request, pk)
+        if booking is None:
+            return Response(
+                {'detail': 'Booking not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        public_id = request.data.get('public_id')
+        if not public_id:
+            return Response(
+                {'detail': 'Field "public_id" is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        documents = list(booking.documents) if isinstance(booking.documents, list) else []
+        if not any(d.get('public_id') == public_id for d in documents):
+            return Response(
+                {'detail': 'Document not found on this booking.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            delete_resource(public_id, resource_type='raw')
+        except StorageError:
+            pass  # still remove from DB even if CDN delete fails
+
+        booking.documents = [d for d in documents if d.get('public_id') != public_id]
+        booking.save(update_fields=['documents', 'updated_at'])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BookingDocumentSignedURLView(APIView):
+    """
+    GET /api/bookings/<id>/document-url/?public_id=...
+
+    Returns a short-lived signed URL (15-minute TTL) for a private document.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        user = request.user
+        if user.role == 'admin':
+            booking = Booking.objects.filter(pk=pk).first()
+        elif user.role == 'provider':
+            booking = Booking.objects.filter(pk=pk, provider__user=user).first()
+        else:
+            booking = Booking.objects.filter(pk=pk, patient=user).first()
+
+        if booking is None:
+            return Response(
+                {'detail': 'Booking not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        public_id = request.query_params.get('public_id')
+        if not public_id:
+            return Response(
+                {'detail': 'Query param "public_id" is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        documents = booking.documents if isinstance(booking.documents, list) else []
+        if not any(d.get('public_id') == public_id for d in documents):
+            return Response(
+                {'detail': 'Document not found on this booking.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            url = signed_document_url(public_id, expires_in_seconds=900)
+        except StorageError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'url': url, 'expires_in_seconds': 900})

@@ -16,6 +16,9 @@ python-dotenv>=1.0,<2
 # CORS
 django-cors-headers>=4.6,<5
 
+# Media storage (Cloudinary CDN with image optimization + signed URLs)
+cloudinary>=1.44,<2
+
 # Development
 ipython>=8.0
 

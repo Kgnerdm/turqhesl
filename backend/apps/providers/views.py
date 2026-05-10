@@ -480,3 +480,215 @@ class PlatformStatsView(APIView):
             'completed_bookings': completed_bookings,
         })
 
+
+
+# ----------------------------------------------------------------------
+# Cloudinary upload views
+# ----------------------------------------------------------------------
+
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+from apps.core.storage import (
+    StorageError,
+    delete_resource,
+    public_id_from_url,
+    upload_image,
+)
+
+
+class ProviderLogoUploadView(APIView):
+    """
+    POST /api/providers/me/upload-logo/
+    multipart/form-data with field 'file'
+
+    Replaces the logged-in provider's logo. Old logo is removed from CDN.
+    """
+
+    permission_classes = [IsAuthenticated, IsProvider]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        try:
+            provider = request.user.provider_profile
+        except Provider.DoesNotExist:
+            return Response(
+                {'detail': 'Provider profile not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response(
+                {'detail': 'No file uploaded. Use field name "file".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            asset = upload_image(
+                file_obj,
+                folder=f'turqheal/providers/{provider.pk}/logo',
+                content_type=file_obj.content_type,
+                tags=['provider_logo', f'provider_{provider.pk}'],
+            )
+        except StorageError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Best-effort cleanup of the previous logo
+        if provider.logo_url:
+            old_id = public_id_from_url(provider.logo_url)
+            if old_id:
+                try:
+                    delete_resource(old_id, resource_type='image')
+                except StorageError:
+                    pass  # don't fail the request if cleanup fails
+
+        provider.logo_url = asset.url
+        provider.save(update_fields=['logo_url', 'updated_at'])
+
+        return Response(asset.to_dict(), status=status.HTTP_201_CREATED)
+
+
+class ProviderCoverUploadView(APIView):
+    """
+    POST /api/providers/me/upload-cover/
+    multipart/form-data with field 'file'
+    """
+
+    permission_classes = [IsAuthenticated, IsProvider]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        try:
+            provider = request.user.provider_profile
+        except Provider.DoesNotExist:
+            return Response(
+                {'detail': 'Provider profile not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response(
+                {'detail': 'No file uploaded. Use field name "file".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            asset = upload_image(
+                file_obj,
+                folder=f'turqheal/providers/{provider.pk}/cover',
+                content_type=file_obj.content_type,
+                tags=['provider_cover', f'provider_{provider.pk}'],
+            )
+        except StorageError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if provider.cover_image_url:
+            old_id = public_id_from_url(provider.cover_image_url)
+            if old_id:
+                try:
+                    delete_resource(old_id, resource_type='image')
+                except StorageError:
+                    pass
+
+        provider.cover_image_url = asset.url
+        provider.save(update_fields=['cover_image_url', 'updated_at'])
+
+        return Response(asset.to_dict(), status=status.HTTP_201_CREATED)
+
+
+class ProviderGalleryUploadView(APIView):
+    """
+    POST /api/providers/me/upload-gallery/
+    multipart/form-data with one or more 'file' fields
+
+    Appends images to the provider's gallery.
+    """
+
+    permission_classes = [IsAuthenticated, IsProvider]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        try:
+            provider = request.user.provider_profile
+        except Provider.DoesNotExist:
+            return Response(
+                {'detail': 'Provider profile not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        files = request.FILES.getlist('file')
+        if not files:
+            return Response(
+                {'detail': 'No files uploaded. Use field name "file" (one or more).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        uploaded = []
+        errors = []
+        for file_obj in files:
+            try:
+                asset = upload_image(
+                    file_obj,
+                    folder=f'turqheal/providers/{provider.pk}/gallery',
+                    content_type=file_obj.content_type,
+                    tags=['provider_gallery', f'provider_{provider.pk}'],
+                )
+                uploaded.append(asset)
+            except StorageError as exc:
+                errors.append({'file': getattr(file_obj, 'name', '?'), 'detail': str(exc)})
+
+        # Append URLs to existing gallery (model uses string list for backwards compat)
+        existing = provider.images if isinstance(provider.images, list) else []
+        new_urls = [a.url for a in uploaded]
+        provider.images = existing + new_urls
+        provider.save(update_fields=['images', 'updated_at'])
+
+        return Response(
+            {
+                'uploaded': [a.to_dict() for a in uploaded],
+                'errors': errors,
+            },
+            status=status.HTTP_201_CREATED if uploaded else status.HTTP_400_BAD_REQUEST,
+        )
+
+    def delete(self, request):
+        """
+        DELETE /api/providers/me/upload-gallery/
+        body: { "url": "<cloudinary url>" }
+
+        Removes a single gallery image by URL.
+        """
+        try:
+            provider = request.user.provider_profile
+        except Provider.DoesNotExist:
+            return Response(
+                {'detail': 'Provider profile not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        url = request.data.get('url')
+        if not url:
+            return Response(
+                {'detail': 'Field "url" is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        existing = provider.images if isinstance(provider.images, list) else []
+        if url not in existing:
+            return Response(
+                {'detail': 'Image not found in this provider gallery.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        public_id = public_id_from_url(url)
+        if public_id:
+            try:
+                delete_resource(public_id, resource_type='image')
+            except StorageError:
+                pass  # still remove from DB even if CDN delete fails
+
+        provider.images = [u for u in existing if u != url]
+        provider.save(update_fields=['images', 'updated_at'])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

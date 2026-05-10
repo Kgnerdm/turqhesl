@@ -13,17 +13,18 @@ import {
   Clock,
   ShieldAlert
 } from 'lucide-react';
-import { Button, Card, Badge, Modal, Input, Select, CardSkeleton } from '@/components/ui';
+import { Button, Card, Badge, Modal, Input, Select, CardSkeleton, GalleryUploader } from '@/components/ui';
 import { formatPrice } from '@/utils/format';
 import { PACKAGE_CATEGORIES, type Package, type PackageCategory, type Provider } from '@/types';
-import { 
-  getMyPackages, 
-  createPackage, 
-  updatePackage, 
-  deletePackage, 
-  togglePackageStatus 
+import {
+  getMyPackages,
+  createPackage,
+  updatePackage,
+  deletePackage,
+  togglePackageStatus
 } from '@/api/packages';
 import { getMyProvider } from '@/api/providers';
+import { uploadPackageImages, deletePackageImage } from '@/api/uploads';
 
 interface PackageFormData {
   name: string;
@@ -60,6 +61,7 @@ const PackageManagement = () => {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isToggling, setIsToggling] = useState<string | null>(null);
   const [providerProfile, setProviderProfile] = useState<Provider | null>(null);
+  const [packageImages, setPackageImages] = useState<string[]>([]);
 
   const categoryOptions = Object.entries(PACKAGE_CATEGORIES).map(([value, label]) => ({
     value,
@@ -112,10 +114,12 @@ const PackageManagement = () => {
         excludes: pkg.excludes || [],
       });
       setIncludesInput(pkg.includes?.join(', ') || '');
+      setPackageImages(Array.isArray(pkg.images) ? pkg.images : []);
     } else {
       setEditingPackage(null);
       setFormData(initialFormData);
       setIncludesInput('');
+      setPackageImages([]);
     }
     setSaveError(null);
     setShowModal(true);
@@ -136,6 +140,7 @@ const PackageManagement = () => {
     const packageData = {
       ...formData,
       includes,
+      images: editingPackage?.images ?? [],
     };
 
     try {
@@ -516,6 +521,31 @@ const PackageManagement = () => {
                 Separate each item with a comma
               </p>
             </div>
+
+            {/* Package gallery — only when editing (id needed for upload) */}
+            {editingPackage ? (
+              <div className="border-t pt-4">
+                <GalleryUploader
+                  label="Package Images"
+                  images={packageImages}
+                  maxItems={8}
+                  onUpload={async (files) => {
+                    const result = await uploadPackageImages(editingPackage.id, files);
+                    setPackageImages((prev) => [...prev, ...result.uploaded.map((u) => u.url)]);
+                  }}
+                  onRemove={async (url) => {
+                    await deletePackageImage(editingPackage.id, url);
+                    setPackageImages((prev) => prev.filter((u) => u !== url));
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="border-t pt-4">
+                <p className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  Save the package first, then reopen it to upload images.
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <Button

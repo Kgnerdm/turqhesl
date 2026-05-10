@@ -594,3 +594,123 @@ class SearchSuggestionsView(APIView):
             'total': len(package_results) + len(provider_results)
         })
 
+
+
+# ----------------------------------------------------------------------
+# Cloudinary upload views
+# ----------------------------------------------------------------------
+
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+from apps.core.storage import (
+    StorageError,
+    delete_resource,
+    public_id_from_url,
+    upload_image,
+)
+
+
+class PackageImagesUploadView(APIView):
+    """
+    POST /api/packages/<id>/upload-images/
+    multipart/form-data with one or more 'file' fields
+
+    Append images to a package the requester owns.
+    """
+
+    permission_classes = [IsAuthenticated, IsProvider]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request, pk):
+        try:
+            package = Package.objects.select_related('provider').get(pk=pk)
+        except Package.DoesNotExist:
+            return Response(
+                {'detail': 'Package not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if package.provider.user_id != request.user.id:
+            return Response(
+                {'detail': 'You do not own this package.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        files = request.FILES.getlist('file')
+        if not files:
+            return Response(
+                {'detail': 'No files uploaded. Use field name "file".'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        uploaded = []
+        errors = []
+        for file_obj in files:
+            try:
+                asset = upload_image(
+                    file_obj,
+                    folder=f'turqheal/packages/{package.pk}/images',
+                    content_type=file_obj.content_type,
+                    tags=['package_image', f'package_{package.pk}'],
+                )
+                uploaded.append(asset)
+            except StorageError as exc:
+                errors.append({'file': getattr(file_obj, 'name', '?'), 'detail': str(exc)})
+
+        existing = package.images if isinstance(package.images, list) else []
+        new_urls = [a.url for a in uploaded]
+        package.images = existing + new_urls
+        package.save(update_fields=['images', 'updated_at'])
+
+        return Response(
+            {
+                'uploaded': [a.to_dict() for a in uploaded],
+                'errors': errors,
+            },
+            status=status.HTTP_201_CREATED if uploaded else status.HTTP_400_BAD_REQUEST,
+        )
+
+    def delete(self, request, pk):
+        """
+        DELETE /api/packages/<id>/upload-images/
+        body: { "url": "<cloudinary url>" }
+        """
+        try:
+            package = Package.objects.select_related('provider').get(pk=pk)
+        except Package.DoesNotExist:
+            return Response(
+                {'detail': 'Package not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if package.provider.user_id != request.user.id:
+            return Response(
+                {'detail': 'You do not own this package.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        url = request.data.get('url')
+        if not url:
+            return Response(
+                {'detail': 'Field "url" is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        existing = package.images if isinstance(package.images, list) else []
+        if url not in existing:
+            return Response(
+                {'detail': 'Image not found in this package.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        public_id = public_id_from_url(url)
+        if public_id:
+            try:
+                delete_resource(public_id, resource_type='image')
+            except StorageError:
+                pass
+
+        package.images = [u for u in existing if u != url]
+        package.save(update_fields=['images', 'updated_at'])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

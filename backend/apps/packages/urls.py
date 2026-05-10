@@ -9,6 +9,7 @@ from .views import (
     PackageCreateView,
     PackageDeleteView,
     PackageDetailView,
+    PackageImagesUploadView,
     PackageListView,
     PackageUpdateView,
     PackageToggleStatusView,
@@ -43,6 +44,7 @@ urlpatterns = [
     path('<int:pk>/update/', PackageUpdateView.as_view(), name='update'),
     path('<int:pk>/delete/', PackageDeleteView.as_view(), name='delete'),
     path('<int:pk>/toggle-status/', PackageToggleStatusView.as_view(), name='toggle-status'),
+    path('<int:pk>/upload-images/', PackageImagesUploadView.as_view(), name='upload-images'),
     
     # Package-specific favorites (toggle & check)
     path('<int:pk>/favorite/', FavoriteToggleView.as_view(), name='favorite-toggle'),

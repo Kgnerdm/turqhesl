@@ -127,7 +127,15 @@ class Booking(models.Model):
         blank=True,
         help_text='Reason for cancellation'
     )
-    
+
+    # Private medical documents stored on Cloudinary as 'authenticated' resources.
+    # Each item: {"public_id": str, "filename": str, "uploaded_at": iso, "uploaded_by": int}
+    documents = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Private medical documents (Cloudinary public_ids; signed URL on read)'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

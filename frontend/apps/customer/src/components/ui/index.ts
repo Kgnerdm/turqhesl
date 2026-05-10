@@ -28,3 +28,12 @@ export {
   PageTransition,
 } from './Motion';
 
+export { default as ImageUploader } from './ImageUploader';
+export type { ImageUploaderProps } from './ImageUploader';
+
+export { default as GalleryUploader } from './GalleryUploader';
+export type { GalleryUploaderProps } from './GalleryUploader';
+
+export { default as DocumentUploader } from './DocumentUploader';
+export type { DocumentUploaderProps, DocumentItem } from './DocumentUploader';
+
