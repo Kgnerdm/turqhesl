@@ -203,12 +203,16 @@ class ProcessPaymentView(APIView):
         if result.succeeded:
             payment.mark_succeeded(charge_id=result.charge_id)
             self._on_payment_succeeded(payment)
+            from apps.notifications import services as notif_services
+            notif_services.notify_payment_succeeded(payment)
         else:
             payment.mark_failed(
                 status=result.status,
                 code=result.error_code,
                 message=result.error_message,
             )
+            from apps.notifications import services as notif_services
+            notif_services.notify_payment_failed(payment)
 
         return Response(
             {

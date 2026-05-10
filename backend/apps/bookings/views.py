@@ -120,7 +120,11 @@ class BookingCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         booking = serializer.save()
-        
+
+        # In-app notification: provider sees a new-booking bell entry
+        from apps.notifications import services as notif_services
+        notif_services.notify_new_booking_for_provider(booking)
+
         # Return the created booking with full details
         detail_serializer = BookingDetailSerializer(booking)
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
@@ -163,12 +167,16 @@ class BookingStatusUpdateView(APIView):
                 send_booking_confirmed_email,
                 send_booking_status_changed_email,
             )
+            from apps.notifications import services as notif_services
+
             if updated_booking.status == Booking.Status.CONFIRMED:
                 send_booking_confirmed_email.delay(updated_booking.id)
+                notif_services.notify_booking_confirmed(updated_booking)
             else:
                 send_booking_status_changed_email.delay(
                     updated_booking.id, previous_status
                 )
+                notif_services.notify_booking_status_changed(updated_booking, previous_status)
 
         return Response(BookingDetailSerializer(updated_booking).data)
 
@@ -204,9 +212,11 @@ class BookingCancelView(APIView):
         serializer.is_valid(raise_exception=True)
         cancelled_booking = serializer.save()
 
-        # Notify both parties asynchronously
+        # Notify both parties asynchronously (email) + in-app for the provider
         from apps.notifications.tasks import send_booking_cancelled_email
+        from apps.notifications import services as notif_services
         send_booking_cancelled_email.delay(cancelled_booking.id)
+        notif_services.notify_booking_cancelled_for_provider(cancelled_booking)
 
         return Response(BookingDetailSerializer(cancelled_booking).data)
 

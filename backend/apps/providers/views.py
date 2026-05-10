@@ -247,7 +247,9 @@ class ProviderVerifyView(APIView):
         # Notify provider when their status flips to verified for the first time
         if is_verified and not was_verified:
             from apps.notifications.tasks import send_provider_verified_email
+            from apps.notifications import services as notif_services
             send_provider_verified_email.delay(provider.id)
+            notif_services.notify_provider_verified(provider)
 
         detail_serializer = ProviderDetailSerializer(provider)
         return Response(detail_serializer.data)
@@ -422,9 +424,11 @@ class AdminRejectProviderView(APIView):
         provider.is_active = False
         provider.save()
 
-        # Notify the provider asynchronously
+        # Notify the provider (email + in-app bell)
         from apps.notifications.tasks import send_provider_rejected_email
+        from apps.notifications import services as notif_services
         send_provider_rejected_email.delay(provider.id, rejection_reason)
+        notif_services.notify_provider_rejected(provider, rejection_reason)
 
         return Response({
             'detail': 'Provider application rejected successfully.',

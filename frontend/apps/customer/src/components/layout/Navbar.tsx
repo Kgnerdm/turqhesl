@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, User, LogOut, LayoutDashboard, Heart, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, Avatar, SearchAutocomplete } from '@/components/ui';
+import NotificationBell from '@/components/NotificationBell';
 import { cn } from '@/utils/cn';
 
 const Navbar = () => {
@@ -110,6 +111,7 @@ const Navbar = () => {
                 ⌘K
               </kbd>
             </button>
+            {isAuthenticated && <NotificationBell />}
             {isAuthenticated ? (
               <div className="relative">
                 <button

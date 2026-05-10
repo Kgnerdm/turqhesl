@@ -27,6 +27,8 @@ const AdminDashboard = lazy(() => import('@/pages/dashboard/admin/AdminDashboard
 // Profile page
 const ProfilePage = lazy(() => import('@/pages/profile/ProfilePage'));
 const CheckoutPage = lazy(() => import('@/pages/payments/CheckoutPage'));
+const PrivacyPage = lazy(() => import('@/pages/legal/PrivacyPage'));
+const TermsPage = lazy(() => import('@/pages/legal/TermsPage'));
 
 /**
  * Suspense wrapper for lazy loaded components
@@ -144,6 +146,26 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
+      {/* Legal pages — public, no layout chrome needed beyond the page */}
+      <Route element={<MainLayout />}>
+        <Route
+          path="privacy"
+          element={
+            <LazyPage>
+              <PrivacyPage />
+            </LazyPage>
+          }
+        />
+        <Route
+          path="terms"
+          element={
+            <LazyPage>
+              <TermsPage />
+            </LazyPage>
+          }
+        />
+      </Route>
 
       {/* Patient dashboard routes */}
       <Route element={<MainLayout hideFooter />}>
