@@ -148,6 +148,7 @@ class BookingStatusUpdateView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
         
+        previous_status = booking.status
         serializer = BookingStatusUpdateSerializer(
             booking,
             data=request.data,
@@ -155,7 +156,20 @@ class BookingStatusUpdateView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         updated_booking = serializer.save()
-        
+
+        # Trigger notifications based on the transition. We dispatch async via Celery.
+        if updated_booking.status != previous_status:
+            from apps.notifications.tasks import (
+                send_booking_confirmed_email,
+                send_booking_status_changed_email,
+            )
+            if updated_booking.status == Booking.Status.CONFIRMED:
+                send_booking_confirmed_email.delay(updated_booking.id)
+            else:
+                send_booking_status_changed_email.delay(
+                    updated_booking.id, previous_status
+                )
+
         return Response(BookingDetailSerializer(updated_booking).data)
 
 
@@ -189,7 +203,11 @@ class BookingCancelView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         cancelled_booking = serializer.save()
-        
+
+        # Notify both parties asynchronously
+        from apps.notifications.tasks import send_booking_cancelled_email
+        send_booking_cancelled_email.delay(cancelled_booking.id)
+
         return Response(BookingDetailSerializer(cancelled_booking).data)
 
 

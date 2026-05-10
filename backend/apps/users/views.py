@@ -464,3 +464,93 @@ class AdminUserDetailView(APIView):
             status=status.HTTP_200_OK
         )
 
+
+
+# ----------------------------------------------------------------------
+# Password reset (token-based, email link)
+# ----------------------------------------------------------------------
+
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+
+
+class PasswordResetRequestView(APIView):
+    """
+    POST /api/auth/password-reset/
+    body: { "email": "user@example.com" }
+
+    Always returns 200 (don't leak whether the email exists). If the email
+    matches an account, a password reset email is dispatched via Celery.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = (request.data.get('email') or '').strip().lower()
+        if not email:
+            return Response(
+                {'detail': 'Email is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+        if user:
+            from apps.notifications.tasks import send_password_reset_email
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_token = f'{uid}.{token}'
+            send_password_reset_email.delay(user.id, reset_token)
+
+        # Same response whether or not the user exists (anti-enumeration)
+        return Response(
+            {'detail': 'If an account exists for that email, a reset link has been sent.'},
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    POST /api/auth/password-reset/confirm/
+    body: { "token": "<uid>.<token>", "new_password": "..." }
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        raw = request.data.get('token') or ''
+        new_password = request.data.get('new_password') or ''
+
+        if not raw or '.' not in raw:
+            return Response(
+                {'detail': 'Invalid or missing token.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(new_password) < 8:
+            return Response(
+                {'detail': 'Password must be at least 8 characters.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        uid_b64, token = raw.split('.', 1)
+        try:
+            uid = int(urlsafe_base64_decode(uid_b64))
+            user = User.objects.get(pk=uid)
+        except (ValueError, User.DoesNotExist):
+            return Response(
+                {'detail': 'Invalid token.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not default_token_generator.check_token(user, token):
+            return Response(
+                {'detail': 'Invalid or expired token.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+        return Response(
+            {'detail': 'Password has been reset.'},
+            status=status.HTTP_200_OK,
+        )

@@ -1,0 +1,14 @@
+Hi {{ provider.business_name }},
+
+Welcome to TurqHeal — your provider profile is now verified.
+
+What this means:
+- You can publish treatment packages to international patients
+- A "Verified" badge appears on your profile and packages
+- Your listings rank above unverified providers
+
+Get started:
+{{ frontend_url }}/dashboard
+
+Thanks for joining TurqHeal.
+— The TurqHeal team

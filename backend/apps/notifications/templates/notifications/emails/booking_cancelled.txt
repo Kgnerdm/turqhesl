@@ -1,0 +1,11 @@
+Booking #{{ booking.id }} has been cancelled.
+
+Treatment: {{ booking.package.name }}
+Patient: {{ booking.patient_name }}
+Provider: {{ booking.provider.business_name }}
+Appointment: {{ booking.appointment_date }}
+{% if booking.cancellation_reason %}Reason: {{ booking.cancellation_reason }}{% endif %}
+
+If this was a mistake, please contact our team — we may still be able to help.
+
+— The TurqHeal team

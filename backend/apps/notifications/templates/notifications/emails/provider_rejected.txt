@@ -1,0 +1,13 @@
+Hi {{ provider.business_name }},
+
+We've reviewed your verification request and unfortunately we cannot
+approve it at this time.
+
+{% if reason %}Reason: {{ reason }}{% endif %}
+
+You can update your profile information and resubmit any time:
+{{ frontend_url }}/dashboard
+
+If you'd like to discuss the decision, reply to this email.
+
+— The TurqHeal team

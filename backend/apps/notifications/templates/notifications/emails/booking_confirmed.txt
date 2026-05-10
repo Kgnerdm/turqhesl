@@ -1,0 +1,21 @@
+Hi {{ booking.patient_name }},
+
+Great news — {{ booking.provider.business_name }} has confirmed your booking.
+
+Booking #{{ booking.id }}
+Treatment: {{ booking.package.name }}
+Appointment: {{ booking.appointment_date }}{% if booking.appointment_time %} at {{ booking.appointment_time }}{% endif %}
+Provider: {{ booking.provider.business_name }} ({{ booking.provider.city }})
+Total: {{ booking.total_price }} {{ booking.currency }}
+
+What happens next:
+1. The provider will reach out with pre-treatment instructions
+2. Plan your travel to {{ booking.provider.city }}
+3. Bring any medical documents you've shared via the platform
+
+View your booking:
+{{ frontend_url }}/dashboard
+
+Need to make a change? Reply to this email — we're happy to help.
+
+— The TurqHeal team

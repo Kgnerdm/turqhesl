@@ -25,6 +25,8 @@ from .views import (
     MeView,
     RegisterView,
     ChangePasswordView,
+    PasswordResetRequestView,
+    PasswordResetConfirmView,
     AdminUserStatsView,
     AdminUserListView,
     AdminUserDetailView,
@@ -42,6 +44,10 @@ urlpatterns = [
     # Profile
     path('me/', MeView.as_view(), name='me'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
+
+    # Password reset (email link)
+    path('password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
+    path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     
     # Admin - User Management
     path('admin/stats/', AdminUserStatsView.as_view(), name='admin_user_stats'),

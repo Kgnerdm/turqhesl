@@ -1,0 +1,15 @@
+Hi {{ booking.patient_name }},
+
+Your booking #{{ booking.id }} status was updated.
+
+Previous: {{ previous_status }}
+Current: {{ booking.get_status_display }}
+
+Treatment: {{ booking.package.name }}
+Provider: {{ booking.provider.business_name }}
+Appointment: {{ booking.appointment_date }}
+
+View your booking:
+{{ frontend_url }}/dashboard
+
+— The TurqHeal team

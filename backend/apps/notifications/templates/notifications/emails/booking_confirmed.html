@@ -1,0 +1,38 @@
+{% extends "notifications/emails/_base.html" %}
+{% block subject %}Booking confirmed{% endblock %}
+{% block content %}
+  <h2 style="margin:0 0 16px;font-size:22px;color:#111827;">Your booking is confirmed</h2>
+  <p style="margin:0 0 16px;line-height:1.6;color:#374151;">
+    Hi {{ booking.patient_name }} — great news. <strong>{{ booking.provider.business_name }}</strong>
+    has confirmed your booking.
+  </p>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="background:#f9fafb;border-radius:8px;padding:16px;margin:16px 0;">
+    <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Booking</td>
+        <td style="padding:6px 0;text-align:right;font-weight:600;">#{{ booking.id }}</td></tr>
+    <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Treatment</td>
+        <td style="padding:6px 0;text-align:right;font-weight:600;">{{ booking.package.name }}</td></tr>
+    <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Appointment</td>
+        <td style="padding:6px 0;text-align:right;font-weight:600;">
+          {{ booking.appointment_date }}{% if booking.appointment_time %} · {{ booking.appointment_time }}{% endif %}
+        </td></tr>
+    <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Location</td>
+        <td style="padding:6px 0;text-align:right;font-weight:600;">{{ booking.provider.city }}</td></tr>
+    <tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Total</td>
+        <td style="padding:6px 0;text-align:right;font-weight:600;color:#1E3A5F;">
+          {{ booking.total_price }} {{ booking.currency }}
+        </td></tr>
+  </table>
+
+  <p style="margin:0 0 24px;line-height:1.6;color:#374151;">
+    The provider will reach out shortly with pre-treatment instructions. You can view full
+    details in your dashboard.
+  </p>
+
+  <a href="{{ frontend_url }}/dashboard"
+     style="display:inline-block;padding:12px 24px;background:#40C4C6;color:#ffffff;
+            text-decoration:none;border-radius:8px;font-weight:600;">
+    View booking
+  </a>
+{% endblock %}

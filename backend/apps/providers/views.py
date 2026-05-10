@@ -232,17 +232,23 @@ class ProviderVerifyView(APIView):
             )
         
         is_verified = serializer.validated_data['is_verified']
+        was_verified = provider.is_verified
         provider.is_verified = is_verified
-        
+
         if is_verified:
             provider.verification_date = timezone.now()
             provider.verified_by = request.user
         else:
             provider.verification_date = None
             provider.verified_by = None
-        
+
         provider.save()
-        
+
+        # Notify provider when their status flips to verified for the first time
+        if is_verified and not was_verified:
+            from apps.notifications.tasks import send_provider_verified_email
+            send_provider_verified_email.delay(provider.id)
+
         detail_serializer = ProviderDetailSerializer(provider)
         return Response(detail_serializer.data)
 
@@ -411,11 +417,15 @@ class AdminRejectProviderView(APIView):
         
         # Get rejection reason if provided
         rejection_reason = request.data.get('reason', 'Application rejected by administrator.')
-        
+
         # Deactivate the provider
         provider.is_active = False
         provider.save()
-        
+
+        # Notify the provider asynchronously
+        from apps.notifications.tasks import send_provider_rejected_email
+        send_provider_rejected_email.delay(provider.id, rejection_reason)
+
         return Response({
             'detail': 'Provider application rejected successfully.',
             'reason': rejection_reason

@@ -1,0 +1,21 @@
+{% extends "notifications/emails/_base.html" %}
+{% block subject %}Verified on TurqHeal{% endblock %}
+{% block content %}
+  <h2 style="margin:0 0 16px;font-size:22px;color:#111827;">You're verified ✓</h2>
+  <p style="margin:0 0 16px;line-height:1.6;color:#374151;">
+    Welcome to TurqHeal, <strong>{{ provider.business_name }}</strong>. Your provider
+    profile has been reviewed and approved.
+  </p>
+
+  <ul style="margin:16px 0;padding:0 0 0 20px;color:#374151;line-height:1.8;">
+    <li>You can publish treatment packages to international patients</li>
+    <li>A "Verified" badge appears on your profile and listings</li>
+    <li>Your packages rank above unverified providers</li>
+  </ul>
+
+  <a href="{{ frontend_url }}/dashboard"
+     style="display:inline-block;padding:12px 24px;background:#10b981;color:#ffffff;
+            text-decoration:none;border-radius:8px;font-weight:600;margin-top:16px;">
+    Go to dashboard
+  </a>
+{% endblock %}
