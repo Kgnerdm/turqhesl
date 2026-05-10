@@ -51,6 +51,7 @@ class RegisterView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_scope = 'auth'
 
     def post(self, request):
         """Handle user registration."""
@@ -103,6 +104,7 @@ class LoginView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_scope = 'auth'
 
     def post(self, request):
         """Handle user login."""
@@ -485,6 +487,7 @@ class PasswordResetRequestView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_scope = 'password_reset'
 
     def post(self, request):
         email = (request.data.get('email') or '').strip().lower()
@@ -516,6 +519,7 @@ class PasswordResetConfirmView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_scope = 'password_reset'
 
     def post(self, request):
         raw = request.data.get('token') or ''

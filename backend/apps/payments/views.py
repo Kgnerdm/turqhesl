@@ -48,6 +48,7 @@ class InitiatePaymentView(APIView):
     """POST /api/payments/initiate/  → create Payment, return checkout URL."""
 
     permission_classes = [IsAuthenticated]
+    throttle_scope = 'payment'
 
     def post(self, request):
         serializer = InitiatePaymentSerializer(data=request.data)
@@ -112,16 +113,31 @@ class InitiatePaymentView(APIView):
         )
 
 
+def _payment_belongs_to(user, payment: Payment) -> bool:
+    """Defense-in-depth: even with the token in hand, only the booking's
+    patient (or an admin) can read or charge this payment."""
+    if not user.is_authenticated:
+        return False
+    if user.role == 'admin':
+        return True
+    return payment.booking.patient_id == user.id
+
+
 class PaymentDetailView(APIView):
     """GET /api/payments/<token>/  — used by the checkout page to display amount + status."""
 
-    permission_classes = [AllowAny]  # token acts as the auth here
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, token):
         payment = get_object_or_404(
             Payment.objects.select_related('booking__package', 'booking__provider'),
             token=token,
         )
+        if not _payment_belongs_to(request.user, payment):
+            return Response(
+                {'detail': 'You do not have access to this payment.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         booking = payment.booking
         return Response({
             'payment': PaymentSerializer(payment).data,
@@ -137,13 +153,19 @@ class PaymentDetailView(APIView):
 class ProcessPaymentView(APIView):
     """POST /api/payments/<token>/process/  — submit card → charge → record."""
 
-    permission_classes = [AllowAny]  # auth via token; we still verify it belongs to caller below
+    permission_classes = [IsAuthenticated]
+    throttle_scope = 'payment'
 
     def post(self, request, token):
         payment = get_object_or_404(
             Payment.objects.select_related('booking'),
             token=token,
         )
+        if not _payment_belongs_to(request.user, payment):
+            return Response(
+                {'detail': 'You do not have access to this payment.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         if payment.is_terminal:
             return Response(

@@ -177,6 +177,20 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.MultiPartParser',
         'rest_framework.parsers.FormParser',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        # Global defaults
+        'anon': '60/minute',
+        'user': '300/minute',
+        # Scoped — used by views that opt-in via `throttle_scope`
+        'auth': '20/minute',         # login / register
+        'password_reset': '5/minute',  # rate-limit reset spam
+        'payment': '30/minute',
+    },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
@@ -376,3 +390,28 @@ PAYMENT_PROVIDER = os.getenv('PAYMENT_PROVIDER', 'mock')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+
+# ----------------------------------------------------------------------
+# Production hardening
+# Activated when DEBUG=False (i.e. on real deployments).
+# Local dev keeps these off so we don't need HTTPS during development.
+# ----------------------------------------------------------------------
+if not DEBUG:
+    # HSTS: tell browsers to always use HTTPS for the next year
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Force HTTPS
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    # Cookies only over HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    # Other defenses
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+    X_FRAME_OPTIONS = 'DENY'
